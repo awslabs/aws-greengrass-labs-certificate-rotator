@@ -1,0 +1,97 @@
+---
+RecipeFormatVersion: 2020-01-25
+ComponentName: COMPONENT_NAME
+ComponentVersion: COMPONENT_VERSION
+ComponentDescription: Certificate Rotator
+ComponentPublisher: Amazon
+ComponentConfiguration:
+  DefaultConfiguration:
+    keyAlgorithm: RSA-2048
+    signingAlgorithm: SHA256WITHRSA
+    accessControl:
+      aws.greengrass.ipc.mqttproxy:
+        aws.greengrass.labs.CertificateRotator:mqttproxy:1:
+          policyDescription: Allows access to publish to relevant topics
+          operations:
+          - "aws.greengrass#PublishToIoTCore"
+          resources:
+          - "$aws/things/{iot:thingName}/jobs/+/get"
+          - "$aws/things/{iot:thingName}/jobs/+/update"
+          - "awslabs/things/{iot:thingName}/certificate/create"
+          - "awslabs/things/{iot:thingName}/certificate/commit"
+        aws.greengrass.labs.CertificateRotator:mqttproxy:2:
+          policyDescription: Allows access to subscribe to relevant topics
+          operations:
+          - "aws.greengrass#SubscribeToIoTCore"
+          resources:
+          - "$aws/things/{iot:thingName}/jobs/notify-next"
+          - "$aws/things/{iot:thingName}/jobs/+/get/accepted"
+          - "$aws/things/{iot:thingName}/jobs/+/get/rejected"
+          - "$aws/things/{iot:thingName}/jobs/+/update/accepted"
+          - "$aws/things/{iot:thingName}/jobs/+/update/rejected"
+          - "awslabs/things/{iot:thingName}/certificate/create/accepted"
+          - "awslabs/things/{iot:thingName}/certificate/create/rejected"
+          - "awslabs/things/{iot:thingName}/certificate/commit/accepted"
+          - "awslabs/things/{iot:thingName}/certificate/commit/rejected"
+ComponentDependencies:
+  aws.greengrass.Nucleus:
+    VersionRequirement: '>=2.6.0'
+    DependencyType: SOFT
+Manifests:
+- Platform:
+    os: linux
+  Lifecycle:
+    Install:
+      Script: |-
+        echo Creating virtual environment
+        python3 -m venv venv
+        echo Activating virtual environment
+        . venv/bin/activate
+        echo Upgrading pip
+        pip install pip --upgrade
+        echo Installing package requirements
+        pip3 install -r {artifacts:decompressedPath}/certificate-rotator/requirements.txt --use-pep517
+    Run:
+      RequiresPrivilege: true
+      Script: |-
+        echo Activating virtual environment
+        . venv/bin/activate
+        echo Running the component
+        python3 -u {artifacts:decompressedPath}/certificate-rotator/main.py
+        EC=$?
+        echo $EC
+        if [ $EC -eq 0 ] ; then
+            echo Restarting the Greengrass service ...
+            sudo systemctl restart greengrass.service
+        fi
+  Artifacts:
+  - Uri: s3://BUCKET_NAME/COMPONENT_NAME/COMPONENT_VERSION/certificate-rotator.zip
+    Unarchive: ZIP
+    Permission:
+      Read: ALL
+- Platform:
+    os: windows
+  Lifecycle:
+    Install:
+      Script: >-
+        echo Creating virtual environment &
+        python -m venv venv &
+        echo Activating virtual environment &
+        .\venv\Scripts\activate.bat &
+        echo Upgrading pip &
+        pip install pip --upgrade &
+        echo Installing package requirements &
+        pip install -r {artifacts:decompressedPath}/certificate-rotator/requirements.txt
+    Run:
+      RequiresPrivilege: true
+      Script: >-
+        echo Activating virtual environment &
+        .\venv\Scripts\activate.bat &
+        echo Running the component &
+        {artifacts:decompressedPath}\\certificate-rotator\\scripts\\run.cmd {artifacts:decompressedPath}/certificate-rotator/main.py
+  Artifacts:
+  - Uri: s3://BUCKET_NAME/COMPONENT_NAME/COMPONENT_VERSION/certificate-rotator.zip
+    Unarchive: ZIP
+    Permission:
+      Read: ALL
+Lifecycle: {}

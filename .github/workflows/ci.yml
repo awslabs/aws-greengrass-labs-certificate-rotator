@@ -1,0 +1,35 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Continuous Integration
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        python --version
+        pylint --version
+        pytest --version
+        bandit --version
+    - name: Static Analysis
+      run: |
+        pylint artifacts backend/lambda libs tests *.py
+    - name: Unit Tests
+      run: |
+        pytest --junit-xml=junit.xml --cov=. --cov-branch
+    - name: Security Scan
+      run: |
+        bandit -r -v artifacts backend/lambda libs *.py

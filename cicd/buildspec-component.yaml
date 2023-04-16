@@ -1,0 +1,61 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      # Install pre-requisite tools
+      - pip3 install -r requirements.txt
+      - pip3 install git+https://github.com/aws-greengrass/aws-greengrass-gdk-cli.git@v1.2.3
+
+      # Log the versions of all tools
+      - python3 --version
+      - pylint --version
+      - pytest --version
+      - bandit --version
+      - gdk --version
+      - jq --version
+  
+  build:
+    commands:
+      # Perform static analysis on our Python source before we use it for anything else
+      - pylint artifacts libs tests *.py
+
+      # Run our unit tests 
+      - pytest --junit-xml=junit.xml --cov=. --cov-branch
+
+      # Run the security scanner
+      - bandit -r -v artifacts libs *.py
+
+      # Create the pre-release component version we'll use for this CI build
+      - VERSION=$(jq -r '.component."aws.greengrass.labs.CertificateRotator".version' gdk-config.json)
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c -7)
+      - CI_VERSION=$VERSION-$CODEBUILD_BUILD_NUMBER-$COMMIT_HASH
+      - echo CI build version is $CI_VERSION
+
+      # Write back to gdk-config.json so that GDK gets the CI build version
+      - jq --arg CI_VERSION "$CI_VERSION" '.component."aws.greengrass.labs.CertificateRotator".version = $CI_VERSION' gdk-config.json > tmp.json && mv tmp.json gdk-config.json
+      - cat gdk-config.json
+
+      # Build and publish the component
+      - gdk component build
+      - gdk component publish
+
+      # Deploy the component version
+      - python3 deploy_component_version.py $CI_VERSION $THING_GROUP_NAME
+
+  post_build:
+    commands:
+
+artifacts:
+  discard-paths: yes
+  files:
+    - greengrass-build/**/*
+    - junit.xml
+
+reports:
+  UnitTestsReport:
+    files:
+      - junit.xml

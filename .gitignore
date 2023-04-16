@@ -1,0 +1,7 @@
+greengrass-build
+__pycache__
+.coverage
+htmlcov
+.vscode
+junit.xml
+.venv

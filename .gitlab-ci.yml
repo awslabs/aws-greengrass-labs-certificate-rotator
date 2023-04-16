@@ -1,0 +1,36 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+image: python:3.9
+
+before_script:
+  - python --version
+  - pip install -r requirements.txt
+  - pylint --version
+  - pytest --version
+  - bandit --version
+
+stages:
+  - Static Analysis
+  - Unit Tests
+  - Security Scan
+
+
+pylint:
+  stage: Static Analysis
+  script:
+  - pylint artifacts backend/lambda libs tests *.py
+
+pytest:
+  stage: Unit Tests
+  script:
+  - pytest --junit-xml=junit.xml --cov=. --cov-branch
+  artifacts:
+    when: always
+    reports:
+      junit: junit.xml
+
+bandit:
+  stage: Security Scan
+  script:
+  - bandit -r -v artifacts backend/lambda libs *.py

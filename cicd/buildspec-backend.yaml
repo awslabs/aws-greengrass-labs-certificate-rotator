@@ -1,0 +1,40 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      # Install pre-requisite tools
+      - pip3 install -r requirements.txt
+
+      # Log the versions of all tools
+      - python3 --version
+      - pylint --version
+      - pytest --version
+      - bandit --version
+      - node --version
+      - npm --version
+
+  
+  build:
+    commands:
+      # Perform static analysis on our Lambdas
+      - pylint backend/lambda
+
+      # Run the security scanner on our Lambdas
+      - bandit -r -v backend/lambda
+
+      # Build and test the backend
+      - cd backend
+      - npm ci
+      - npm run build
+      - npm run test
+
+      # Synth and deploy the backend stack (with default context settings)
+      - npx cdk synth
+      - npx cdk deploy --require-approval never
+
+  post_build:
+    commands:

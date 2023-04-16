@@ -1,0 +1,35 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      # Install pre-requisite tools
+      - pip3 install -r robot/requirements.txt
+
+      # Log the versions of all tools
+      - aws --version
+      - python3 --version
+
+  build:
+    commands:
+      - cd robot
+      - robot --pythonpath libs --variable THING_GROUP_NAME:$THING_GROUP_NAME --variable PCA_CA_ID:$PCA_CA_ID --xunit results.xml suites
+  post_build:
+    commands:
+
+artifacts:
+  discard-paths: yes
+  files:
+    - robot/log.html
+    - robot/report.html
+    - robot/output.xml
+    - robot/results.xml
+
+reports:
+  IntegrationTestsReport:
+    files:
+      - results.xml
+    base-directory: 'robot'

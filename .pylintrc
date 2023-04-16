@@ -1,0 +1,28 @@
+[MESSAGES CONTROL]
+# These are too noisy in our humble scripts
+disable=C0103,    # Disable 'Constant name "args" doesn't conform to UPPER_CASE naming style (invalid-name)'
+      W0703       # Disable 'Catching too general exception Exception (broad-except)''
+
+[FORMAT]
+
+# Increase default line length
+max-line-length=120
+
+# We have some small duplication in Lambdas
+[SIMILARITIES]
+min-similarity-lines=8
+
+[BASIC]
+
+# Allow 'e' as a good variable name (for exceptions)
+good-names=i,
+           j,
+           k,
+           ex,
+           Run,
+           _,
+           e
+
+[MASTER]
+# The paths added here are to help resolve imports for unit tests
+init-hook='import sys; sys.path.append("artifacts"); sys.path.append("libs"); sys.path.append("backend/lambda/create_certificate"); sys.path.append("backend/lambda/commit_certificate"); sys.path.append("backend/lambda/job_execution_terminal")'
