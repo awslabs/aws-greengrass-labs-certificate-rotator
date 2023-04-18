@@ -17,24 +17,26 @@ Consequently this repository delivers a full end-to-end device certificate and p
   * [Design Goals](#design-goals)
 * [Requirements and Prerequisites](#requirements-and-prerequisites)
   * [Greengrass Core Device](#greengrass-core-device)
-    * [Edge Runtime](#edge-runtime)
+    * [Platform](#platform)
     * [Python Requirements](#python-requirements)
+    * [Hardware Security Module](#hardware-security-module)
+    * [Edge Runtime](#edge-runtime)
   * [Greengrass Cloud Services](#greengrass-cloud-services)
     * [Core Device Role](#core-device-role)
     * [IoT Policy](#iot-policy)
   * [Developer Machine](#developer-machine)
     * [AWS CLI](#aws-cli)
+    * [AWS CDK](#aws-cdk)
     * [Python](#python)
     * [GDK CLI](#gdk-cli)
-    * [AWS CDK](#aws-cdk)
 * [Getting Started](#getting-started)
   * [Cloud Backend](#cloud-backend)
   * [Component](#component)
     * [Build and Publish](#build-and-publish)
     * [Deploy](#deploy)
     * [Configuration](#configuration)
-  * [Automated Integration Tests](#automated-integration-tests)
-  * [CI/CD Pipeline](#cicd-pipeline)
+      * [keyAlgorithm](#keyalgorithm)
+      * [signingAlgorithm](#signingalgorithm)
   * [Notifications](#notifications)
   * [Certificate Rotation Jobs](#certificate-rotation-jobs)
     * [Console](#console)
@@ -47,11 +49,15 @@ Consequently this repository delivers a full end-to-end device certificate and p
   * [Common Errors](#common-errors)
     * [Interpolation Not Enabled](#interpolation-not-enabled)
     * [Job Execution Events Disabled](#job-execution-events-disabled)
-* [Development](#development)
+* [Development and Testing](#development-and-testing)
   * [Static Analysis](#static-analysis)
   * [Unit Tests](#unit-tests)
   * [Security Scanning](#security-scanning)
-  * [Testing](#testing)
+  * [Automated Integration Tests](#automated-integration-tests)
+  * [CI/CD Pipeline](#cicd-pipeline)
+  * [CDK Unit Tests](#cdk-unit-tests)
+  * [CDK Nag](#cdk-nag)
+  * [Test Fleet](#test-fleet)
 
 # Repository Contents
 
@@ -92,9 +98,9 @@ With reference to the architecture diagram:
 | ------------------------------------------------------ | ----------- |
 | `$aws/things/thingName/jobs/notify-next`               | The Certificate Rotator component is notified of a new certificate rotation job. |
 | `$aws/things/thingName/jobs/jobId/update`              | The component updates the job execution status to `IN_PROGRESS`. |
-| `$aws/things/thingName/jobs/jobId/update/accepted`     | The cloud notifies the component that the job execution update is accepted. The Certificate Rotator component generates a new private key and creates a Certificate Signing Request (CSR) from it, held on disk or in an HSM. |
+| `$aws/things/thingName/jobs/jobId/update/accepted`     | The cloud notifies the component that the job execution update is accepted. The Certificate Rotator component generates a new private key and creates a Certificate Signing Request (CSR) from it. |
 | `awslabs/things/thingName/certificate/create`          | The component sends the CSR to the cloud backend, along with the job ID so that strict chain of custody can be maintained. The `create-certificate` Lambda validates the creation request and creates the new certificate, using either AWS IoT or AWS Private CA. It attaches IoT policies to the new certificate and attaches the new certificate to the Thing. |
-| `awslabs/things/thingName/certificate/create/accepted` | The cloud backend returns the new certificate to the Certificate Rotator component. The component backs up the old certificate and private key, installs the new certificate and private key on disk or in the HSM, and restarts the Greengrass service so that it will attempt to connect using the new certificate and private key. |
+| `awslabs/things/thingName/certificate/create/accepted` | The cloud backend returns the new certificate to the Certificate Rotator component. The component backs up the old certificate and private key, installs the new certificate on disk or in the HSM, and restarts the Greengrass service so that it will attempt to connect using the new certificate and private key. |
 | `$aws/things/thingName/jobs/$next/get`                 | Upon restarting, the component attempts to get the latest job context. |
 | `$aws/things/thingName/jobs/jobId/get/accepted`        | If the new certificate and private key are good, the job execution status is returned by the cloud and the status is `IN_PROGRESS`. (Should the component fail to receive this message, rollback would begin.) |
 | `awslabs/things/thingName/certificate/commit`          | The component asks the cloud backend to attempt to commit to the new certificate. The request includes the job ID so that strict chain of custody can be maintained. The `commit-certificate` Lambda validates the request and verifies that the principal used to make the MQTT connection is the new certificate. |
@@ -143,6 +149,18 @@ This component and cloud backend take inspiration from the [device certificate r
 
 This component [supports all platforms and architectures supported by Greengrass itself](https://docs.aws.amazon.com/greengrass/v2/developerguide/setting-up.html#greengrass-v2-supported-platforms).
 
+### Python Requirements
+
+This component requires **python3**, **python3-venv** and **pip3** to be installed on the core device.
+
+### Hardware Security Module
+
+If the Greengrass core device uses a Hardware Security Module (HSM), it must support the following PKCS#11 API operations in addition to [the PKCS#11 API operation required by Greengrass](https://docs.aws.amazon.com/greengrass/v2/developerguide/pkcs11-provider-component.html#pkcs11-provider-component-requirements):
+
+* `C_CopyObject`
+* `C_DestroyObject`
+* `C_GenerateKeyPair`
+
 ### Edge Runtime
 
 The [Greengrass edge runtime needs to be installed](https://docs.aws.amazon.com/greengrass/v2/developerguide/getting-started.html) to a suitable machine, virtual machine or EC2 instance. **It must be installed as a system service**.
@@ -152,10 +170,6 @@ Interpolation of component recipe variables must be enabled using [the **interpo
 If you use AWS Private CA to issue certificates, [the **greengrassDataPlaneEndpoint** setting should be set to **iotdata**](https://docs.aws.amazon.com/greengrass/v2/developerguide/configure-greengrass-core-v2.html#configure-nucleus-private-ca).
 
 Since Greengrass does not expose IoT Core connection status to components, this component uses QoS 0 to ensure timely delivery (or failure) of messages. Consequently it is recommend to leave [the **keepQos0WhenOffline** setting](https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-component.html#greengrass-nucleus-component-configuration) at the default of disabled so that QoS 0 mesages are not spooled.
-
-### Python Requirements
-
-This component requires **python3**, **python3-venv** and **pip3** to be installed on the core device.
 
 ## Greengrass Cloud Services
 
@@ -190,6 +204,10 @@ The AWS IoT Policy for the Greengrass core device must grant the ability to publ
 
 It may be necessary to [upgrade your AWS CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-cli.html) if you wish to use any **greengrassv2** commands, as these are relatively recent additions to the CLI.
 
+### AWS CDK
+
+The cloud backend is a Typescript CDK application. Follow the [Getting started with the AWS SDK guide (for Typescript)](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html) to install CDK and bootstrap your environment.
+
 ### Python
 
 Most of the scripts in this repository are Python scripts. They are Python 3 scripts and hence **python3** and **pip3** are required.
@@ -212,10 +230,6 @@ This component makes use of the [Greengrass Development Kit (GDK) - Command Line
 pip3 install git+https://github.com/aws-greengrass/aws-greengrass-gdk-cli.git@v1.2.3
 ```
 
-### AWS CDK
-
-The cloud backend is a Typescript CDK application. Follow the [Getting started with the AWS SDK guide (for Typescript)](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html) to install CDK and bootstrap your environment.
-
 # Getting Started
 
 Please ensure that all [Requirements and Prerequisites](#requirements-and-prerequisites) have been met before deploying the component or the cloud backend.
@@ -225,13 +239,15 @@ Please ensure that all [Requirements and Prerequisites](#requirements-and-prereq
 To build and deploy the cloud backend CDK application:
 
 1. Change into the **backend** subdirectory.
-2. Run **npm run build** to build the cloud backend.
-3. Run **cdk deploy** to synthesize and deploy the cloud backend.
+2. Run **npm install** to install the required Node modules.
+3. Run **npm run build** to build the cloud backend.
+4. Run **cdk deploy** to synthesize and deploy the cloud backend.
 
 Example execution:
 
 ```
 cd backend
+npm install
 npm run build
 cdk deploy
 ```
@@ -284,6 +300,8 @@ These match the keys types that can be used with the [CreateCertificateFromCsr](
 
 Note that **ECDSA keys cannot be used with Windows devices** because of this outstanding issue: https://github.com/awslabs/aws-c-io/issues/260
 
+If an HSM is used, the component can only use **the subset of algorithms supported by the HSM**.
+
 The default key algorithm is **RSA-2048** as seen in [recipe.yaml](recipe.yaml). To change the key algorithm, the component configuration to be merged has the following form:
 
 ```
@@ -313,16 +331,6 @@ The default signing algorithm is **SHA256WITHRSA** as seen in [recipe.yaml](reci
 	"signingAlgorithm": "SHA384WITHRSA"
 }
 ```
-
-## Automated Integration Tests
-
-This repository includes an [automated integration test suite](robot/README.md) built on top of [Robot Framework](https://robotframework.org/). This can be run on demand from the command-line but it is also included as part of the CI/CD pipeline.
-
-## CI/CD Pipeline
-
-This repository offers a CodePipeline [CI/CD pipeline](cicd/README.md) as a CDK application. This can be optionally deployed to the same account as the Greengrass core devices and the cloud backend. This pipeline is intended for use in DEV, TEST or NON-PROD environments to support testing and development of this component and associated backend.
-
-This CI/CD pipeline automates the build and deployment of both the Certificate Rotator Greengrass component and the cloud backend CDK application. Additionally, it runs the automated integration test suite after deployment.
 
 ## Notifications
 
@@ -417,7 +425,9 @@ The Thing can be checked to see if it has more than one certificate attached. If
 aws iot update-event-configurations --event-configurations "{\"JOB_EXECUTION\":{\"Enabled\": true}}"
 ```
 
-# Development
+# Development and Testing
+
+This solution is an extensible reference implementation. This section documents the code quality measures used during development, should you wish to modify or extend the solution.
 
 ## Static Analysis
 
@@ -463,6 +473,28 @@ Security scanning is performed using [Bandit](https://github.com/PyCQA/bandit). 
 bandit -r -v artifacts backend/lambda libs *.py
 ```
 
-## Testing
+## Automated Integration Tests
+
+This repository includes an [automated integration test suite](robot/README.md) built on top of [Robot Framework](https://robotframework.org/). This can be run on demand from the command-line but it is also included as part of the CI/CD pipeline.
+
+## CI/CD Pipeline
+
+This repository offers a CodePipeline [CI/CD pipeline](cicd/README.md) as a CDK application. This can be optionally deployed to the same account as the Greengrass core devices and the cloud backend. This pipeline is intended for use in DEV, TEST or NON-PROD environments to support testing and development of this component and associated backend.
+
+This CI/CD pipeline automates the build and deployment of both the Certificate Rotator Greengrass component and the cloud backend CDK application. Additionally, it runs the automated integration test suite after deployment.
+
+## CDK Unit Tests
+
+Both the cloud backend and the CI/CD pipeline CDK applications are supplied with unit tests. Example execution:
+
+```
+npm run tests
+```
+
+## CDK Nag
+
+Both the cloud backend and the CI/CD pipeline CDK applications use the [AWS Solutions rules pack](https://github.com/cdklabs/cdk-nag/blob/main/RULES.md#awssolutions) of [CDK Nag](https://github.com/cdklabs/cdk-nag) to validate their stacks at the time of synthesis.
+
+## Test Fleet
 
 The [Greengrass EC2 Device Farm](https://github.com/aws-samples/aws-greengrass-ec2-device-farm) is a convenient way to bring up a disparate fleet of Greengrass devices. This component has been tested against the operating systems and machine architectures supported by the farm. Additionally, it has been tested against a Raspberry Pi 4 with Raspbian OS 10 (Buster) 32-bit (armv7l), with [SoftHSMv2](https://github.com/opendnssec/SoftHSMv2) for PKCS#11/HSM coverage.

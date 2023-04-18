@@ -50,6 +50,12 @@ Unit and integration test reports are stored as build artifacts and [JUnit compa
 
 Follow the [Getting started with the AWS SDK guide (for Typescript)](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html) to install CDK and bootstrap your environment.
 
+## Install dependencies
+
+```
+npm run install
+```
+
 ## Build the application
 
 Compile TypeScript to JS.

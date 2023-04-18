@@ -6,6 +6,7 @@ The cloud backend for the AWS Greengrass Certificate Rotator component is a Type
 * [Architecture](#architecture)
 * [How to](#how-to)
     * [Prerequisites](#prerequisites)
+    * [Install dependencies](#install-dependencies)
     * [Build the application](#build-the-application)
     * [Run unit tests](#run-unit-tests)
     * [Context variables](#context-variables)
@@ -30,6 +31,12 @@ The **create-certificate** Lambda uses either AWS IoT or AWS Private CA to issue
 ## Prerequisites
 
 Follow the [Getting started with the AWS SDK guide (for Typescript)](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html) to install CDK and bootstrap your environment.
+
+## Install dependencies
+
+```
+npm run install
+```
 
 ## Build the application
 
@@ -59,7 +66,7 @@ The following context variables are used to configure AWS Private CA:
 | PcaValidityInDays     | Number of days the device certificates issued by Private CA are valid for.                        |
 | PcaSigningAlgorithm   | SHA256WITHECDSA, SHA384WITHECDSA, SHA512WITHECDSA, SHA256WITHRSA, SHA384WITHRSA or SHA512WITHRSA. |
 
-The AWS Private CA signing algorithm is that used to sign the certificate issued by AWS Private CA. It is not the same as the signing algorithm used by the **aws.greengrass.labs.CertficiateRotator** component to sign the Certificate Signing Request (CSR). 
+The AWS Private CA signing algorithm is that used to sign the certificate issued by AWS Private CA. It is not the same as the signing algorithm used by the **aws.greengrass.labs.CertificateRotator** component to sign the Certificate Signing Request (CSR). 
 
 Note that the encryption family (RSA or ECC) of the AWS Private CA signing algorithm must match that of the CA's private key.
 

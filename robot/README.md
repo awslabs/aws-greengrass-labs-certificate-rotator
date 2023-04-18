@@ -21,7 +21,12 @@ pip3 install -r robot/requirements.txt
 
 ## Test Suite Execution
 
-The test suite demands that one AWS Private Certficate Authority must be available so that the suite can test issuance of certificates using AWS Private CA. The CA certificate can use either an RSA or EC key algorithm. The test suite will automatically skip test cases that do not match the key algorithm.
+The test suite demands that the following information be passed as variables:
+
+* `THING_GROUP_NAME`: The name of the Thing group containing the Greengrass core devices that are the devices under test.
+* `PCA_CA_ID`: The ID of the AWS Private Certficate Authority that the suite should use to test issuance of certificates using AWS Private CA.
+
+The CA certificate can use either an RSA or EC key algorithm. The test suite will automatically skip test cases that do not match the key algorithm.
 
 ```
 robot --pythonpath libs --variable THING_GROUP_NAME:MyCoreDevicesThingGroup --variable PCA_CA_ID:deadbeef-1111-face-2222-0123456789ab --xunit results.xml suites
