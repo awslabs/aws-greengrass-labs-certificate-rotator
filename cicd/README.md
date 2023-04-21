@@ -77,29 +77,20 @@ The CDK concept of [context](https://docs.aws.amazon.com/cdk/v2/guide/context.ht
 
 Synthesis and deployment of the stack uses the following context variables:
 
-| Name             | Description                                                                                           |
-| ---------------- | ----------------------------------------------------------------------------------------------------- |
-| ConnectionId     | The CodeStar connection ID of the repo, if hosted in GitHub, BitBucket and GitHub Enterprise Server.  |
-| OwnerName        | The name of the owner of the repo, if hosted in GitHub, BitBucket and GitHub Enterprise Server.       |
-| RepositoryName   | The name of the repository containing the source code.                                                |
-| BranchName       | The name of the branch to use in the repository.                                                      |
-| ThingGroupName   | The name of the Thing group of Greengrass core device(s) to which the component should be deployed.   |
-| PcaCaId          | ID of the AWS Private CA certificate to use for issuing device certificates.                          |
+| Name             | Description                                                                                           | Default      |
+| ---------------- | ----------------------------------------------------------------------------------------------------- | ------------ |
+| ConnectionId     | The CodeStar connection ID of the repo, if hosted in GitHub, BitBucket and GitHub Enterprise Server.  | Empty string |
+| OwnerName        | The name of the owner of the repo, if hosted in GitHub, BitBucket and GitHub Enterprise Server.       | Empty string |
+| RepositoryName   | The name of the repository containing the source code.                                                | aws-greengrass-labs-certificate-rotator |
+| BranchName       | The name of the branch to use in the repository.                                                      | main         |
+| ThingGroupName   | The name of the Thing group of Greengrass core device(s) to which the component should be deployed.   | None         |
+| PcaCaId          | ID of the AWS Private CA certificate to use for issuing device certificates.                          | None         |
 
-## Default context
-
-Default context values are defined in [cdk.json](cdk.json) as follows:
-
-```
-"ConnectionId": "",
-"OwnerName": "",
-"RepositoryName": "aws-greengrass-labs-certificate-rotator",
-"BranchName": "main" 
-```
+Default context values are defined in [cdk.json](cdk.json).
 
 The defaults for **ConnectionId** and **OwnerName** select CodeCommit as the repository host. If the repository is cloned or forked into GitHub, Bitbucket or GitHub Enterprise Server, then a [CodeStar connection needs to be created](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create.html). The ID of this connection, and the name of the repository owner, then need to be set on the CDK command line or added to the default context in your cloned or forked repository. The connection ID is the UUID at the end of the connection ARN.
 
-As there is no default for **ThingGroupName** or **PcaCaId**, they must be supplied in the command line of every synthesis or deployment, or added to the default context in your cloned or forked repository. The **PcaCaId** value is only used for select test cases of the integration tests.
+As there is no default for **ThingGroupName** or **PcaCaId**, they must be supplied in the command line of every synthesis or deployment, or added to the default context in your cloned or forked repository. The **PcaCaId** value is only used for a subset of test cases in the integration tests.
 
 ## Deploy the pipeline
 

@@ -60,27 +60,17 @@ The CDK concept of [context](https://docs.aws.amazon.com/cdk/v2/guide/context.ht
 
 The following context variables are used to configure AWS Private CA:
 
-| Name                  | Description                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------- |
-| PcaCaId               | ID of the Private CA certificate to use for issuing device certificates.                          |
-| PcaValidityInDays     | Number of days the device certificates issued by Private CA are valid for.                        |
-| PcaSigningAlgorithm   | SHA256WITHECDSA, SHA384WITHECDSA, SHA512WITHECDSA, SHA256WITHRSA, SHA384WITHRSA or SHA512WITHRSA. |
+| Name                  | Description                                                                                              | Default       | 
+| --------------------- | -------------------------------------------------------------------------------------------------------- | ------------- |
+| PcaCaId               | ID of the Private CA certificate to use for issuing device certificates.                                 | Empty string  |
+| PcaValidityInDays     | Number of days the device certificates issued by Private CA are valid for.                               | 7             |
+| PcaSigningAlgorithm   | SHA256WITHECDSA<br>SHA384WITHECDSA<br>SHA512WITHECDSA<br>SHA256WITHRSA<br>SHA384WITHRSA<br>SHA512WITHRSA | SHA256WITHRSA |
+
+Default context values are defined in [cdk.json](cdk.json). With these defaults, Private CA is disabled and AWS IoT is selected.
 
 The AWS Private CA signing algorithm is that used to sign the certificate issued by AWS Private CA. It is not the same as the signing algorithm used by the **aws.greengrass.labs.CertificateRotator** component to sign the Certificate Signing Request (CSR). 
 
 Note that the encryption family (RSA or ECC) of the AWS Private CA signing algorithm must match that of the CA's private key.
-
-## Default context
-
-Default context values are defined in [cdk.json](cdk.json) as follows:
-
-```
-"PcaCaId": "",
-"PcaValidityInDays": "7", 
-"PcaSigningAlgorithm": "SHA256WITHRSA"
-```
-
-With these defaults, Private CA is disabled and AWS IoT is selected.
 
 Validity in days defaults to 7 so that the backend will work by default with private certificate authorities that are created in [short-lived mode](https://docs.aws.amazon.com/privateca/latest/userguide/short-lived-certificates.html#short). In a production environment, [general-purpose mode](https://docs.aws.amazon.com/privateca/latest/userguide/short-lived-certificates.html#standard) and a longer validity is likely a more appropriate choice.
 
@@ -92,7 +82,7 @@ Deploy with default context, meaning AWS IoT will issue device certificates.
 cdk deploy
 ```
 
-Deploy with a Private CA certificate ID to select Private CA to issue certificates. Default values for validity and signing algorithm will be used.
+Deploy with a Private CA ID to select Private CA to issue certificates. Default values for validity and signing algorithm will be used.
 
 ```
 cdk deploy -c PcaCaId=deadbeef-1111-face-2222-0123456789ab
