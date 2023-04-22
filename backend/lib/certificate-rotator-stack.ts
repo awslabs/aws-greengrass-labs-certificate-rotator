@@ -41,6 +41,9 @@ export class CertificateRotatorStack extends cdk.Stack {
     commitCertificateLambda.role?.attachInlinePolicy(this.commitCertificateLambdaPolicy())
     jobExecutionTerminalLambda.role?.attachInlinePolicy(this.jobExecutionTerminalLambdaPolicy(topic))
 
+    // SNS topic can only be published to by the job execution terminal almbda
+    this.createSnsTopicPolicy(topic, jobExecutionTerminalLambda);
+
     this.createRule('CreateCertificate', createCertificateLambda, 
                     `SELECT *, topic(3) AS thingName, topic() as topic, clientid() AS clientId, principal() AS principal FROM 'awslabs/things/+/certificate/create'`)
     this.createRule('CommitCertificate', commitCertificateLambda, 
@@ -58,17 +61,24 @@ export class CertificateRotatorStack extends cdk.Stack {
       masterKey: kms.Alias.fromAliasName(this, `${this.stackName}SNSKey`, 'alias/aws/sns')
     });
 
+    return topic;
+  }
+
+  private createSnsTopicPolicy(topic: sns.Topic, lambdaFunction: lambda.Function) {
     const topicPolicy = new sns.TopicPolicy(this, `${this.stackName}SNSTopicPolicy`, {
       topics: [topic],
     });
     
     topicPolicy.document.addStatements(new iam.PolicyStatement({
-      actions: ["sns:Publish"],
+      actions: ['sns:Publish'],
       principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
       resources: [topic.topicArn],
+      conditions: {
+        'ArnLike': {
+          'aws:SourceArn': lambdaFunction.functionArn
+        }
+      }
     }));
-
-    return topic;
   }
 
   private createJobTemplate() {
