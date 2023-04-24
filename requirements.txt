@@ -1,7 +1,4 @@
 # Requirements for developer machine
-# Only select pre-compiled wheels for cryptography
-# so we don't need Rust compiler installed on the 
-# target device.
 asn1crypto==1.5.1
 awsiotsdk==1.13.0
 bandit==1.7.5
