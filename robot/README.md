@@ -1,4 +1,4 @@
-# AWS Labs Greengrass Certificate Rotator Automated Intgration Tests
+# AWS Labs Greengrass Certificate Rotator Automated Integration Tests
 
 The automated integration test suite uses [Robot Framework](https://robotframework.org/) as a test harness.
 

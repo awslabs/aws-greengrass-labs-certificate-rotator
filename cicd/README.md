@@ -33,7 +33,7 @@ Alternatively the user may clone the repository to CodeCommit, Bitbucket or GitH
 
 ## Versioning
 
-The pipeline automatically increments the component patch version number by using the [Greengrass Development Kit (GDK) - Command Line Interface (CLI)](https://github.com/aws-greengrass/aws-greengrass-gdk-cli) to build and publish the component.
+The pipeline generates an automated component pre-release version by appending the CodeBuild build number and short Git commit hash to the version number defined in **gdk-config.json**. 
 
 ## Notifications
 
