@@ -1,10 +1,10 @@
 # AWS Greengrass Labs Certificate Rotator
 
-Device certificate and private key rotation is a [security best practice laid out by the IoT Lens for the AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/iot-lens-checklist/design-principle-6.html). At the time of writing however, AWS IoT does not offer a device certificate rotation service or feature. It's left to customers and application builders to implement both the device software and the cloud backend to achieve device certificate rotation.
+Device certificate and private key rotation is a [security best practice defined in the IoT Lens for the AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/iot-lens-checklist/design-principle-6.html). At the time of writing however, AWS IoT does not offer a device certificate rotation service or feature. It's left to customers and application builders to implement both the device software and the cloud backend to achieve device certificate rotation.
 
 To guide customers in this implementation, AWS offers a [device certificate rotation blog](https://aws.amazon.com/blogs/iot/how-to-manage-iot-device-certificate-rotation-using-aws-iot/), an [IoT Jumpstart workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/001cd52d-8105-4da9-a0c2-ee391260e0c7/en-US/operations/lab30-devicecertrotation) and the [Connected Device Framework (CDF) Certificate Vendor module](https://github.com/aws/aws-connected-device-framework/tree/main/source/packages/services/certificatevendor). These are documented rotation procedures and/or partial implementations.
 
-In general, it's challenging to offer a full end-to-end device certificate and private key rotation reference implementation because the device software is heavily dependent on the device hardware. In particular, certificate and private key storage and APIs are strongly influenced by the hardware and the Hardware Abstraction layer (HAL). However, AWS IoT Greengrass offers a unique opportunity to build a reference implementation because it standardizes the certificate and private key storage via the [Greengrass Core software installation configuration](https://docs.aws.amazon.com/greengrass/v2/developerguide/manual-installation.html#run-greengrass-core-v2-installer-manual). The location of the certificate and private key are defined by the **certificateFilePath** and **privateKeyPath** configuration parameters. These may be defined as files on disk or as [PKCS#11 objects in a Hardware Security Module (HSM)](https://docs.aws.amazon.com/greengrass/v2/developerguide/hardware-security.html).
+In general, it's challenging to offer a full end-to-end device certificate and private key rotation reference implementation because the device software is heavily dependent on the device hardware. In particular, certificate and private key storage and APIs are strongly influenced by the hardware and the Hardware Abstraction layer (HAL). However, AWS IoT Greengrass presents an opportunity to build a reference implementation because it standardizes the certificate and private key storage via the [Greengrass Core software installation configuration](https://docs.aws.amazon.com/greengrass/v2/developerguide/manual-installation.html#run-greengrass-core-v2-installer-manual). The location of the certificate and private key are defined by the **certificateFilePath** and **privateKeyPath** configuration parameters. These may be defined as files on disk or as [PKCS#11 objects in a Hardware Security Module (HSM)](https://docs.aws.amazon.com/greengrass/v2/developerguide/hardware-security.html).
 
 Consequently this repository delivers a full end-to-end device certificate and private key rotation reference implementation for Greengrass core devices. A Greengrass component named **aws.greengrass.labs.CertificateRotator** delivers the device part of the contract and an AWS Cloud Development Kit (CDK) stack delivers the companion cloud backend. The component supports credentials stored as files or stored in an HSM. The cloud backend supports certificates issued by either AWS IoT Core or by [AWS Private Certificate Authority (CA)](https://aws.amazon.com/private-ca/). The cloud backend can also be adopted by non-Greengrass devices, with the device software developed to match the functionality of the Greengrass component.
 
@@ -29,6 +29,7 @@ Consequently this repository delivers a full end-to-end device certificate and p
     * [AWS CDK](#aws-cdk)
     * [Python](#python)
     * [GDK CLI](#gdk-cli)
+* [YouTube Video](#youtube-video)
 * [Getting Started](#getting-started)
   * [Cloud Backend](#cloud-backend)
   * [Component](#component)
@@ -140,6 +141,12 @@ This component and cloud backend take inspiration from the [device certificate r
 11. Support both Windows and Linux core devices.
 12. Support devices that use Hardware Security Modules (HSMs).
 13. Support the [Certificate signing algorithms supported by AWS IoT](https://docs.aws.amazon.com/iot/latest/developerguide/x509-client-certs.html#x509-cert-algorithms).
+
+# YouTube Video
+
+This video guides you in how to deploy and use this solution.
+
+[![Watch the video](https://img.youtube.com/vi/Bz7flvgyEx0/hqdefault.jpg)](https://youtu.be/Bz7flvgyEx0)
 
 # Requirements and Prerequisites
 
