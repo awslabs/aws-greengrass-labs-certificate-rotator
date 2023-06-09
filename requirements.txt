@@ -3,7 +3,7 @@ asn1crypto==1.5.1
 awsiotsdk==1.13.0
 bandit==1.7.5
 boto3==1.26.113
-cryptography==40.0.1
+cryptography==41.0.0
 pylint==2.17.2
 pytest==7.3.0
 pytest-cov==4.0.0
