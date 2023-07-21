@@ -3,7 +3,7 @@
 # python-pkcs11 on Linux since HSMs are only supported by Greengrass on Linux.
 asn1crypto==1.5.1
 awsiotsdk==1.13.0
-cryptography==41.0.0
+cryptography==41.0.2
 python-pkcs11==0.7.0; platform_system == "Linux" and python_version >= '3.7'
 PyYAML==6.0
 wheel; platform_system == "Linux" and python_version >= '3.7'
