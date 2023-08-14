@@ -53,7 +53,7 @@ Follow the [Getting started with the AWS SDK guide (for Typescript)](https://doc
 ## Install dependencies
 
 ```
-npm run install
+npm install
 ```
 
 ## Build the application
