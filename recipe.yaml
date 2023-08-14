@@ -50,7 +50,7 @@ Manifests:
         echo Upgrading pip
         pip install pip --upgrade
         echo Installing package requirements
-        pip3 install -r {artifacts:decompressedPath}/certificate-rotator/requirements.txt --use-pep517
+        pip3 install -r {artifacts:decompressedPath}/certificate-rotator/requirements.txt
     Run:
       RequiresPrivilege: true
       Script: |-

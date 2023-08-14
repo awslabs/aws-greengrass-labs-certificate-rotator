@@ -234,7 +234,7 @@ Please consider to use a [virtual environment](https://docs.python.org/3/library
 This component makes use of the [Greengrass Development Kit (GDK) - Command Line Interface (CLI)](https://github.com/aws-greengrass/aws-greengrass-gdk-cli). This can be installed as follows:
 
 ```
-pip3 install git+https://github.com/aws-greengrass/aws-greengrass-gdk-cli.git@v1.2.3
+pip3 install git+https://github.com/aws-greengrass/aws-greengrass-gdk-cli.git@v1.3.0
 ```
 
 # Getting Started

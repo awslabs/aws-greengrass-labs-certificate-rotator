@@ -8,7 +8,7 @@ phases:
     commands:
       # Install pre-requisite tools
       - pip3 install -r requirements.txt
-      - pip3 install git+https://github.com/aws-greengrass/aws-greengrass-gdk-cli.git@v1.2.3
+      - pip3 install git+https://github.com/aws-greengrass/aws-greengrass-gdk-cli.git@v1.3.0
 
       # Log the versions of all tools
       - python3 --version
@@ -29,10 +29,9 @@ phases:
       # Run the security scanner
       - bandit -r -v artifacts libs *.py
 
-      # Create the pre-release component version we'll use for this CI build
+      # Create the pre-release component version we'll use for this CI build. Use build number as patch revision.
       - VERSION=$(jq -r '.component."aws.greengrass.labs.CertificateRotator".version' gdk-config.json)
-      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c -7)
-      - CI_VERSION=$VERSION-$CODEBUILD_BUILD_NUMBER-$COMMIT_HASH
+      - CI_VERSION=$(echo $VERSION | cut -d . -f 1,2).$CODEBUILD_BUILD_NUMBER
       - echo CI build version is $CI_VERSION
 
       # Write back to gdk-config.json so that GDK gets the CI build version
