@@ -25,7 +25,8 @@ KEY_ALGORITHMS = {
     'RSA-2048': { 'size': 2048, 'type': rsa.RSAPublicKey },
     'RSA-3072': { 'size': 3072, 'type': rsa.RSAPublicKey },
     'ECDSA-P256': { 'size': 256, 'type': ec.EllipticCurvePublicKey },
-    'ECDSA-P384': { 'size': 384, 'type': ec.EllipticCurvePublicKey }
+    'ECDSA-P384': { 'size': 384, 'type': ec.EllipticCurvePublicKey },
+    'ECDSA-P521': { 'size': 521, 'type': ec.EllipticCurvePublicKey }
 }
 
 SIGNATURE_ALGORITHMS = {

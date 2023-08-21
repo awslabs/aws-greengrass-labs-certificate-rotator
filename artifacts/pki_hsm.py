@@ -27,7 +27,8 @@ if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
         'RSA-2048': { 'size': 2048, 'type': KeyType.RSA },
         'RSA-3072': { 'size': 3072, 'type': KeyType.RSA },
         'ECDSA-P256': { 'curve': 'secp256r1', 'type': KeyType.EC },
-        'ECDSA-P384': { 'curve': 'secp384r1', 'type': KeyType.EC }
+        'ECDSA-P384': { 'curve': 'secp384r1', 'type': KeyType.EC },
+        'ECDSA-P521': { 'curve': 'secp521r1', 'type': KeyType.EC }
     }
 
     SIGNING_ALGORITHMS = {
