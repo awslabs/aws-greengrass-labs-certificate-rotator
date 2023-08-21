@@ -337,14 +337,15 @@ The signing algorithm is what the component will use to sign the Certificate Sig
 
 | Key              | Allowed Values                                    | Default       |
 | ---------------- | ------------------------------------------------- | ------------- |
-| keyAlgorithm     | RSA-2048<br>RSA-3072<br>ECDSA-P256 (not on Windows)<br>ECDSA-P384 (not on Windows) | RSA-2048 |
+| keyAlgorithm     | RSA-2048<br>RSA-3072<br>ECDSA-P256<sup>1</sup><br>ECDSA-P384<sup>1</sup><br>ECDSA-P521<sup>1,2</sup> | RSA-2048 |
 | signingAlgorithm | SHA256WITHRSA<br>SHA384WITHRSA<br>SHA512WITHRSA<br>ECDSA-WITH-SHA256<br>ECDSA-WITH-SHA384<br>ECDSA-WITH-SHA512 | SHA256WITHRSA |
+
+*1 - ECDSA keys currently cannot be used with Windows devices: https://github.com/awslabs/aws-c-io/issues/260*<br>
+*2 - ECDSA-P521 keys currently cannot be used with HSMs and PKCS #11: https://github.com/awslabs/aws-c-io/issues/591*
 
 Default values are defined in [recipe.yaml](recipe.yaml).
 
 The component [validates configuration updates](https://docs.aws.amazon.com/greengrass/v2/developerguide/ipc-component-configuration.html#ipc-operation-subscribetovalidateconfigurationupdates). If there is an attempt to merge invalid settings, the deployment will fail. The encryption family (RSA or EC) of the signing algorithm has to match that of the key algorithm.
-
-Note that **ECDSA keys currently cannot be used with Windows devices** because of this outstanding issue: https://github.com/awslabs/aws-c-io/issues/260
 
 If an HSM is used, the component can only use **the subset of algorithms supported by the HSM**.
 

@@ -17,7 +17,8 @@ KEY_ALGORITHMS = {
     'RSA-2048': { 'size': 2048, 'type': rsa.RSAPrivateKey },
     'RSA-3072': { 'size': 3072, 'type': rsa.RSAPrivateKey },
     'ECDSA-P256': { 'curve': ec.SECP256R1, 'type': ec.EllipticCurvePrivateKey },
-    'ECDSA-P384': { 'curve': ec.SECP384R1, 'type': ec.EllipticCurvePrivateKey }
+    'ECDSA-P384': { 'curve': ec.SECP384R1, 'type': ec.EllipticCurvePrivateKey },
+    'ECDSA-P521': { 'curve': ec.SECP521R1, 'type': ec.EllipticCurvePrivateKey }
 }
 
 SIGNING_ALGORITHMS = {

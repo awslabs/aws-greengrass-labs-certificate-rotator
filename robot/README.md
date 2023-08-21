@@ -71,6 +71,12 @@ Mismatch: ECDSA-P384 with SHA384WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
 Mismatch: ECDSA-P384 with SHA512WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
+Mismatch: ECDSA-P521 with SHA256WITHRSA                               | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P521 with SHA384WITHRSA                               | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P521 with SHA512WITHRSA                               | PASS |
+------------------------------------------------------------------------------
 Suites.1-Invalid-Configuration :: Component invalid configuration ... | PASS |
 14 tests, 14 passed, 0 failed
 ==============================================================================
@@ -119,6 +125,12 @@ AWS IoT CA with ECDSA-P384 key with ECDSA-WITH-SHA256 CSR             | PASS |
 AWS IoT CA with ECDSA-P384 key with ECDSA-WITH-SHA384 CSR             | PASS |
 ------------------------------------------------------------------------------
 AWS IoT CA with ECDSA-P384 key with ECDSA-WITH-SHA512 CSR             | PASS |
+------------------------------------------------------------------------------
+AWS IoT CA with ECDSA-P521 key with ECDSA-WITH-SHA256 CSR             | PASS |
+------------------------------------------------------------------------------
+AWS IoT CA with ECDSA-P521 key with ECDSA-WITH-SHA384 CSR             | PASS |
+------------------------------------------------------------------------------
+AWS IoT CA with ECDSA-P521 key with ECDSA-WITH-SHA512 CSR             | PASS |
 ------------------------------------------------------------------------------
 Suites.3-Rotation-Aws-Iot-Ca :: Rotate with AWS IoT CA as issuer      | PASS |
 12 tests, 12 passed, 0 failed

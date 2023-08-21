@@ -24,6 +24,9 @@ AWS IoT CA with ECDSA-P256 key and ECDSA-WITH-SHA512 CSR    ECDSA-P256  ECDSA-WI
 AWS IoT CA with ECDSA-P384 key and ECDSA-WITH-SHA256 CSR    ECDSA-P384  ECDSA-WITH-SHA256
 AWS IoT CA with ECDSA-P384 key and ECDSA-WITH-SHA384 CSR    ECDSA-P384  ECDSA-WITH-SHA384
 AWS IoT CA with ECDSA-P384 key and ECDSA-WITH-SHA512 CSR    ECDSA-P384  ECDSA-WITH-SHA512
+AWS IoT CA with ECDSA-P521 key and ECDSA-WITH-SHA256 CSR    ECDSA-P521  ECDSA-WITH-SHA256
+AWS IoT CA with ECDSA-P521 key and ECDSA-WITH-SHA384 CSR    ECDSA-P521  ECDSA-WITH-SHA384
+AWS IoT CA with ECDSA-P521 key and ECDSA-WITH-SHA512 CSR    ECDSA-P521  ECDSA-WITH-SHA512
 
 *** Keywords ***
 Setup
@@ -34,7 +37,7 @@ Rotation Should Succeed
     [Arguments]     ${key_algorithm}    ${signing_algorithm}
 
     # The IoT Device SDK doesn't support EC keys under Windows: https://github.com/awslabs/aws-c-io/issues/260
-    IF  '${key_algorithm}' == 'ECDSA-P256' or '${key_algorithm}' == 'ECDSA-P384'
+    IF  '${key_algorithm}' == 'ECDSA-P256' or '${key_algorithm}' == 'ECDSA-P384' or '${key_algorithm}' == 'ECDSA-P521'
         ${removed_things} =     Greengrass.Remove Windows Devices From Thing Group
     END
 
@@ -53,6 +56,6 @@ Rotation Should Succeed
 
 Restore Windows Devices
     [Arguments]     ${key_algorithm}    ${signing_algorithm}    ${removed_things}
-    IF  '${key_algorithm}' == 'ECDSA-P256' or '${key_algorithm}' == 'ECDSA-P384'
+    IF  '${key_algorithm}' == 'ECDSA-P256' or '${key_algorithm}' == 'ECDSA-P384' or '${key_algorithm}' == 'ECDSA-P521'
         Greengrass.Add Windows Devices To Thing Group   ${removed_things}
     END
