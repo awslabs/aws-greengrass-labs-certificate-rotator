@@ -42,6 +42,9 @@ Manifests:
     os: linux
   Lifecycle:
     Install:
+      # If the Python cryptography package wheel has to be built, the install
+      # can take several minutes. Normally though, we use a pre-built wheel. 
+      Timeout: 900
       Script: |-
         echo Creating virtual environment
         python3 -m venv venv
@@ -73,6 +76,9 @@ Manifests:
     os: windows
   Lifecycle:
     Install:
+      # If the Python cryptography package wheel has to be built, the install
+      # can take several minutes. Normally though, we use a pre-built wheel. 
+      Timeout: 900
       Script: >-
         echo Creating virtual environment &
         python -m venv venv &

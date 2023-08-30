@@ -147,7 +147,7 @@ def test_fails_if_job_execution_timed_out(boto3_client, job_description):
 def test_fails_if_deployment_times_out(mocker, boto3_client, job_description):
     """ Should exit abruptly if the deployment times out """
     job_description['job']['jobProcessDetails']['numberOfInProgressThings'] = 10
-    mocker.patch('time.time', side_effect=[0, 0, 300])
+    mocker.patch('time.time', side_effect=[0, 0, 900])
     job_description['job']['jobProcessDetails']['numberOfTimedOutThings'] = 1
     confirm_exit()
     calls=[call(deploymentId=DEPLOYMENT_ID), call(deploymentId=NEW_DEPLOYMENT_ID)]

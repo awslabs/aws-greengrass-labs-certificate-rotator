@@ -93,7 +93,7 @@ def wait_for_deployment_to_finish(deploy_id):
     done = False
     snapshot = time.time()
 
-    while not done and (time.time() - snapshot) < 300:
+    while not done and (time.time() - snapshot) < 900:
         try:
             response = greengrassv2_client.get_deployment(deploymentId=deploy_id)
             deployment_status = response['deploymentStatus']

@@ -1,7 +1,24 @@
-# Requirements for the Greengrass component. Only select pre-compiled wheels for cryptography
-# to ensure we don't need Rust compiler installed on the target device. (We select the newest
-# version for which there is a wheel in piwheels.org). Only install 
-# python-pkcs11 on Linux since HSMs are only supported by Greengrass on Linux.
+# Requirements for the Greengrass component. 
+#
+# In general, we prefer to use the latest version of cryptography for which pre-built
+# wheels exist, including the Raspberry Pi (https://piwheels.org/project/cryptography/).
+#
+# However, if you elect to use a version for which no pre-built wheel exists
+# for your target device, then the first deployment of this component will build
+# the wheel. This build requires that the Rust compiler be already installed on the
+# target core device before deploying the certificate rotator component. 
+# 
+# If you need to install Rust on your target core device, please use the rustup 
+# installer (https://rustup.rs/) and take care to install Rust for your Greengrass
+# user (usually ggc_user). For example:
+#
+# sudo su ggc_user
+# curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+#
+# The Rust installation also then needs to added to your asystem path. This can be
+# done by adding /home/ggc_user/.cargo/bin to the secure_path variable in the
+# /etc/sudoers file.
+
 asn1crypto==1.5.1
 awsiotsdk==1.17.0
 cryptography==40.0.1
