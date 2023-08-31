@@ -36,11 +36,12 @@ class PubSub():
         """ Subscribes to an IoT Core topic """
         print(f'Subscribing to topic {topic}')
         try:
-            self._ipc_client.subscribe_to_iot_core(topic_name=topic,
-                                                    qos=QOS.AT_LEAST_ONCE,
-                                                    on_stream_event=self.on_stream_event,
-                                                    on_stream_error=self.on_stream_error,
-                                                    on_stream_closed=self.on_stream_closed)
+            (fut, _) = self._ipc_client.subscribe_to_iot_core_async(topic_name=topic,
+                                                                    qos=QOS.AT_LEAST_ONCE,
+                                                                    on_stream_event=self.on_stream_event,
+                                                                    on_stream_error=self.on_stream_error,
+                                                                    on_stream_closed=self.on_stream_closed)
+            fut.result(timeout=30)
             rval = True
         except Exception:
             traceback.print_exc()

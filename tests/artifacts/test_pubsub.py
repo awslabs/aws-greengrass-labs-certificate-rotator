@@ -49,10 +49,11 @@ def test_publish_exception(ipc_client, pubsub):
     assert pubsub.publish(TOPIC, PAYLOAD) is False
     ipc_client.publish_to_iot_core.assert_called_once_with(topic_name=TOPIC, qos=QOS.AT_MOST_ONCE, payload=PAYLOAD)
 
-def test_subscribe(ipc_client, pubsub):
+def test_subscribe(mocker, ipc_client, pubsub):
     """ Confirm subscribe """
+    ipc_client.subscribe_to_iot_core_async.return_value = (mocker.Mock(), None)
     assert pubsub.subscribe(TOPIC) is True
-    ipc_client.subscribe_to_iot_core.assert_called_once_with(topic_name=TOPIC, qos=QOS.AT_LEAST_ONCE,
+    ipc_client.subscribe_to_iot_core_async.assert_called_once_with(topic_name=TOPIC, qos=QOS.AT_LEAST_ONCE,
                                                     on_stream_event=ANY,
                                                     on_stream_error=ANY,
                                                     on_stream_closed=ANY)
@@ -61,7 +62,7 @@ def test_subscribe_exception(ipc_client, pubsub):
     """ Confirm subscribe catches exception """
     ipc_client.subscribe_to_iot_core.side_effect=Exception('mocked error')
     assert pubsub.subscribe(TOPIC) is False
-    ipc_client.subscribe_to_iot_core.assert_called_once_with(topic_name=TOPIC, qos=QOS.AT_LEAST_ONCE,
+    ipc_client.subscribe_to_iot_core_async.assert_called_once_with(topic_name=TOPIC, qos=QOS.AT_LEAST_ONCE,
                                                     on_stream_event=ANY,
                                                     on_stream_error=ANY,
                                                     on_stream_closed=ANY)
