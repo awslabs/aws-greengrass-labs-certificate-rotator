@@ -57,7 +57,7 @@ class StateMachine():
 
         rollback = False
 
-        while not self._create_subscriptions() and not rollback:
+        while not rollback and not self._create_subscriptions():
             # We failed to subscribe. It means we don't have
             # comms with IoT Core, just after Greengrass has started up. If we
             # have a certificate backup, it means we are trying to rotate the
