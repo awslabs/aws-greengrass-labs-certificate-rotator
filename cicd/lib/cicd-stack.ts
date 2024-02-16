@@ -60,7 +60,7 @@ export class CicdStack extends cdk.Stack {
       projectName: `${this.stackName}${name}`,
       buildSpec: codebuild.BuildSpec.fromSourceFilename(`cicd/buildspec-${specName}.yaml`),
       environment: {
-        buildImage: codebuild.LinuxBuildImage.STANDARD_6_0
+        buildImage: codebuild.LinuxBuildImage.STANDARD_7_0
       },
       timeout: cdk.Duration.minutes(timeout),
       // This key specification should be redundant because it's the same as the default if it's
@@ -152,6 +152,7 @@ export class CicdStack extends cdk.Stack {
 
     const pipeline = new codepipeline.Pipeline(this, `${this.stackName}`, {
       pipelineName: `${this.stackName}`,
+      pipelineType: codepipeline.PipelineType.V2,
       artifactBucket: pipelineBucket,
       stages: [
         {
