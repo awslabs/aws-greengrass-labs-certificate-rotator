@@ -65,11 +65,23 @@ Mismatch: ECDSA-P256 with SHA384WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
 Mismatch: ECDSA-P256 with SHA512WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
+Mismatch: ECDSA-P256 with SHA256WITHRSAANDMGF1                        | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P256 with SHA384WITHRSAANDMGF1                        | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P256 with SHA512WITHRSAANDMGF1                        | PASS |
+------------------------------------------------------------------------------
 Mismatch: ECDSA-P384 with SHA256WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
 Mismatch: ECDSA-P384 with SHA384WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
 Mismatch: ECDSA-P384 with SHA512WITHRSA                               | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P384 with SHA256WITHRSAANDMGF1                        | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P384 with SHA384WITHRSAANDMGF1                        | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P384 with SHA512WITHRSAANDMGF1                        | PASS |
 ------------------------------------------------------------------------------
 Mismatch: ECDSA-P521 with SHA256WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
@@ -77,8 +89,14 @@ Mismatch: ECDSA-P521 with SHA384WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
 Mismatch: ECDSA-P521 with SHA512WITHRSA                               | PASS |
 ------------------------------------------------------------------------------
+Mismatch: ECDSA-P521 with SHA256WITHRSAANDMGF1                        | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P521 with SHA384WITHRSAANDMGF1                        | PASS |
+------------------------------------------------------------------------------
+Mismatch: ECDSA-P521 with SHA512WITHRSAANDMGF1                        | PASS |
+------------------------------------------------------------------------------
 Suites.1-Invalid-Configuration :: Component invalid configuration ... | PASS |
-14 tests, 14 passed, 0 failed
+26 tests, 26 passed, 0 failed
 ==============================================================================
 Suites.2-Rotation-Aws-Private-Ca :: Rotate with AWS Private CA as issuer      
 ==============================================================================
@@ -108,11 +126,23 @@ AWS IoT CA with RSA-2048 key and SHA384WITHRSA CSR                    | PASS |
 ------------------------------------------------------------------------------
 AWS IoT CA with RSA-2048 key and SHA512WITHRSA CSR                    | PASS |
 ------------------------------------------------------------------------------
+AWS IoT CA with RSA-2048 key and SHA256WITHRSAANDMGF1 CSR             | PASS |
+------------------------------------------------------------------------------
+AWS IoT CA with RSA-2048 key and SHA384WITHRSAANDMGF1 CSR             | PASS |
+------------------------------------------------------------------------------
+AWS IoT CA with RSA-2048 key and SHA512WITHRSAANDMGF1 CSR             | PASS |
+------------------------------------------------------------------------------
 AWS IoT CA with RSA-3072 key and SHA256WITHRSA CSR                    | PASS |
 ------------------------------------------------------------------------------
 AWS IoT CA with RSA-3072 key and SHA384WITHRSA CSR                    | PASS |
 ------------------------------------------------------------------------------
 AWS IoT CA with RSA-3072 key and SHA512WITHRSA CSR                    | PASS |
+------------------------------------------------------------------------------
+AWS IoT CA with RSA-3072 key and SHA256WITHRSAANDMGF1 CSR             | PASS |
+------------------------------------------------------------------------------
+AWS IoT CA with RSA-3072 key and SHA384WITHRSAANDMGF1 CSR             | PASS |
+------------------------------------------------------------------------------
+AWS IoT CA with RSA-3072 key and SHA512WITHRSAANDMGF1 CSR             | PASS |
 ------------------------------------------------------------------------------
 AWS IoT CA with ECDSA-P256 key with ECDSA-WITH-SHA256 CSR             | PASS |
 ------------------------------------------------------------------------------
@@ -133,7 +163,7 @@ AWS IoT CA with ECDSA-P521 key with ECDSA-WITH-SHA384 CSR             | PASS |
 AWS IoT CA with ECDSA-P521 key with ECDSA-WITH-SHA512 CSR             | PASS |
 ------------------------------------------------------------------------------
 Suites.3-Rotation-Aws-Iot-Ca :: Rotate with AWS IoT CA as issuer      | PASS |
-12 tests, 12 passed, 0 failed
+21 tests, 21 passed, 0 failed
 ==============================================================================
 Suites.4-Rotation-Failures :: Rotation failures and rollback                  
 ==============================================================================
@@ -147,7 +177,7 @@ Suites.4-Rotation-Failures :: Rotation failures and rollback          | PASS |
 3 tests, 3 passed, 0 failed, 0 skipped
 ==============================================================================
 Suites :: AWS Labs Greengrass Certificate Rotator test suite          | PASS |
-35 tests, 32 passed, 0 failed, 3 skipped
+56 tests, 53 passed, 0 failed, 3 skipped
 ==============================================================================
 Output:  /home/user/git/aws-greengrass-labs-certificate-rotator/robot/output.xml
 XUnit:   /home/user/git/aws-greengrass-labs-certificate-rotator/robot/results.xml
