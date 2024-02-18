@@ -10,24 +10,33 @@ import shutil
 import traceback
 from cryptography.x509 import CertificateSigningRequestBuilder, load_pem_x509_certificate
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, ec
+from cryptography.hazmat.primitives.asymmetric import rsa, ec, padding
 from pki import PKI
 
 KEY_ALGORITHMS = {
     'RSA-2048': { 'size': 2048, 'type': rsa.RSAPrivateKey },
     'RSA-3072': { 'size': 3072, 'type': rsa.RSAPrivateKey },
-    'ECDSA-P256': { 'curve': ec.SECP256R1, 'type': ec.EllipticCurvePrivateKey },
-    'ECDSA-P384': { 'curve': ec.SECP384R1, 'type': ec.EllipticCurvePrivateKey },
-    'ECDSA-P521': { 'curve': ec.SECP521R1, 'type': ec.EllipticCurvePrivateKey }
+    'ECDSA-P256': { 'curve': ec.SECP256R1(), 'type': ec.EllipticCurvePrivateKey },
+    'ECDSA-P384': { 'curve': ec.SECP384R1(), 'type': ec.EllipticCurvePrivateKey },
+    'ECDSA-P521': { 'curve': ec.SECP521R1(), 'type': ec.EllipticCurvePrivateKey }
 }
 
 SIGNING_ALGORITHMS = {
-    'SHA256WITHRSA': { 'hash': hashes.SHA256(), 'type': rsa.RSAPrivateKey },
-    'SHA384WITHRSA': { 'hash': hashes.SHA384(), 'type': rsa.RSAPrivateKey },
-    'SHA512WITHRSA': { 'hash': hashes.SHA512(), 'type': rsa.RSAPrivateKey },
-    'ECDSA-WITH-SHA256': { 'hash': hashes.SHA256(), 'type': ec.EllipticCurvePrivateKey },
-    'ECDSA-WITH-SHA384': { 'hash': hashes.SHA384(), 'type': ec.EllipticCurvePrivateKey },
-    'ECDSA-WITH-SHA512': { 'hash': hashes.SHA512(), 'type': ec.EllipticCurvePrivateKey }
+    'SHA256WITHRSA': { 'hash': hashes.SHA256(), 'type': rsa.RSAPrivateKey, 'padding': None },
+    'SHA384WITHRSA': { 'hash': hashes.SHA384(), 'type': rsa.RSAPrivateKey, 'padding': None },
+    'SHA512WITHRSA': { 'hash': hashes.SHA512(), 'type': rsa.RSAPrivateKey, 'padding': None },
+
+    # Use the maximum salt length, that matches the hash length
+    'SHA256WITHRSAANDMGF1': { 'hash': hashes.SHA256(), 'type': rsa.RSAPrivateKey,
+                             'padding': padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=32) },
+    'SHA384WITHRSAANDMGF1': { 'hash': hashes.SHA384(), 'type': rsa.RSAPrivateKey,
+                             'padding': padding.PSS(mgf=padding.MGF1(hashes.SHA384()), salt_length=48) },
+    'SHA512WITHRSAANDMGF1': { 'hash': hashes.SHA512(), 'type': rsa.RSAPrivateKey,
+                             'padding': padding.PSS(mgf=padding.MGF1(hashes.SHA512()), salt_length=64) },
+
+    'ECDSA-WITH-SHA256': { 'hash': hashes.SHA256(), 'type': ec.EllipticCurvePrivateKey, 'padding': None },
+    'ECDSA-WITH-SHA384': { 'hash': hashes.SHA384(), 'type': ec.EllipticCurvePrivateKey, 'padding': None },
+    'ECDSA-WITH-SHA512': { 'hash': hashes.SHA512(), 'type': ec.EllipticCurvePrivateKey, 'padding': None }
 }
 
 class PKIFile(PKI):
@@ -68,7 +77,8 @@ class PKIFile(PKI):
             # subject name attributes as the existing certificate.
             new_csr = CertificateSigningRequestBuilder().\
                     subject_name(certificate.subject).\
-                    sign(new_private_key, SIGNING_ALGORITHMS[self._config.signing_algorithm]['hash'])
+                    sign(new_private_key, SIGNING_ALGORITHMS[self._config.signing_algorithm]['hash'],
+                         rsa_padding=SIGNING_ALGORITHMS[self._config.signing_algorithm]['padding'])
 
             # Get the private key format. aws-crt-io demands PKCS#1 format for the private key when running
             # under Windows. A PKCS#1 RSA key is also what AWS IoT CreateKeysAndCertificate produces.

@@ -17,11 +17,11 @@ from pki import PKI
 if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
     (sys.version_info.major == 3 and sys.version_info.minor >= 7)):
     import pkcs11
-    from pkcs11 import Attribute, ObjectClass, Mechanism, KeyType, MechanismFlag
+    from pkcs11 import Attribute, ObjectClass, Mechanism, KeyType, MechanismFlag, MGF
     from pkcs11.util.x509 import decode_x509_certificate
     from pkcs11.util.rsa import encode_rsa_public_key
     from pkcs11.util.ec import encode_ecdsa_signature, encode_named_curve_parameters
-    from asn1crypto import pem, x509, csr, keys, core
+    from asn1crypto import pem, x509, csr, keys, core, algos
 
     KEY_ALGORITHMS = {
         'RSA-2048': { 'size': 2048, 'type': KeyType.RSA },
@@ -31,16 +31,49 @@ if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
         'ECDSA-P521': { 'curve': 'secp521r1', 'type': KeyType.EC }
     }
 
+    class Params(algos.RSASSAPSSParams):
+        """ RSA PSS parameters for ASN.1 CSR creation """
+        def __init__(self, hash_alg, salt_size):
+            super().__init__({
+                'hash_algorithm': algos.DigestAlgorithm({'algorithm': hash_alg}),
+                'mask_gen_algorithm': algos.MaskGenAlgorithm({
+                    'algorithm': algos.MaskGenAlgorithmId('mgf1'),
+                    'parameters': {
+                        'algorithm': algos.DigestAlgorithmId(hash_alg),
+                    }
+                }),
+                'salt_length': algos.Integer(salt_size),
+                'trailer_field': algos.TrailerField(1)
+            })
+
     SIGNING_ALGORITHMS = {
-        'SHA256WITHRSA': { 'name': 'sha256_rsa', 'mech': Mechanism.SHA256_RSA_PKCS, 'type': KeyType.RSA },
-        'SHA384WITHRSA': { 'name': 'sha384_rsa', 'mech': Mechanism.SHA384_RSA_PKCS, 'type': KeyType.RSA },
-        'SHA512WITHRSA': { 'name': 'sha512_rsa', 'mech': Mechanism.SHA512_RSA_PKCS, 'type': KeyType.RSA },
-        'ECDSA-WITH-SHA256': { 'name': 'sha256_ecdsa', 'mech': Mechanism.ECDSA,
-                                'hash': hashes.SHA256(), 'type': KeyType.EC },
-        'ECDSA-WITH-SHA384': { 'name': 'sha384_ecdsa', 'mech': Mechanism.ECDSA,
-                                'hash': hashes.SHA384(), 'type': KeyType.EC },
-        'ECDSA-WITH-SHA512': { 'name': 'sha512_ecdsa', 'mech': Mechanism.ECDSA,
-                                'hash': hashes.SHA512(), 'type': KeyType.EC }
+        'SHA256WITHRSA': { 'name': 'sha256_rsa', 'params': None, 'mech': Mechanism.SHA256_RSA_PKCS,
+                            'mech_param': None, 'type': KeyType.RSA },
+        'SHA384WITHRSA': { 'name': 'sha384_rsa', 'params': None, 'mech': Mechanism.SHA384_RSA_PKCS,
+                            'mech_param': None, 'type': KeyType.RSA },
+        'SHA512WITHRSA': { 'name': 'sha512_rsa', 'params': None, 'mech': Mechanism.SHA512_RSA_PKCS,
+                            'mech_param': None, 'type': KeyType.RSA },
+
+        # Use the maximum salt length, that matches the hash length
+        'SHA256WITHRSAANDMGF1': { 'name': 'rsassa_pss', 'params': Params('sha256', 32), 
+                                    'mech': Mechanism.SHA256_RSA_PKCS_PSS,
+                                    'mech_param': (Mechanism.SHA256, MGF.SHA256, 32),
+                                    'type': KeyType.RSA },
+        'SHA384WITHRSAANDMGF1': { 'name': 'rsassa_pss', 'params': Params('sha384', 48),
+                                    'mech': Mechanism.SHA384_RSA_PKCS_PSS,
+                                    'mech_param': (Mechanism.SHA384, MGF.SHA384, 48),
+                                    'type': KeyType.RSA },
+        'SHA512WITHRSAANDMGF1': { 'name': 'rsassa_pss', 'params': Params('sha512', 64),
+                                    'mech': Mechanism.SHA512_RSA_PKCS_PSS,
+                                    'mech_param': (Mechanism.SHA512, MGF.SHA512, 64),
+                                    'type': KeyType.RSA },
+
+        'ECDSA-WITH-SHA256': { 'name': 'sha256_ecdsa', 'params': None, 'mech': Mechanism.ECDSA,
+                                'mech_param': None, 'hash': hashes.SHA256(), 'type': KeyType.EC },
+        'ECDSA-WITH-SHA384': { 'name': 'sha384_ecdsa', 'params': None, 'mech': Mechanism.ECDSA,
+                                'mech_param': None, 'hash': hashes.SHA384(), 'type': KeyType.EC },
+        'ECDSA-WITH-SHA512': { 'name': 'sha512_ecdsa', 'params': None, 'mech': Mechanism.ECDSA,
+                                'mech_param': None, 'hash': hashes.SHA512(), 'type': KeyType.EC }
     }
 
 class PKIHSM(PKI):
@@ -91,7 +124,8 @@ class PKIHSM(PKI):
             # Sign the CSR information, by using the private key inside the HSM
             print(f'Signing the CSR using algorithm {self._config.signing_algorithm}')
             mech = SIGNING_ALGORITHMS[self._config.signing_algorithm]['mech']
-            signature = pending_priv_key.sign(data, mechanism=mech)
+            mech_param = SIGNING_ALGORITHMS[self._config.signing_algorithm]['mech_param']
+            signature = pending_priv_key.sign(data, mechanism=mech, mechanism_param=mech_param)
 
             # For ECDSA keys, PKCS #11 outputs the two parameters (r & s)
             # as two concatenated biginteger of the same length. Encode them.
@@ -100,10 +134,11 @@ class PKIHSM(PKI):
 
             # Now build the final CSR
             algorithm = SIGNING_ALGORITHMS[self._config.signing_algorithm]['name']
+            params = SIGNING_ALGORITHMS[self._config.signing_algorithm]['params']
             new_csr = csr.CertificationRequest({'certification_request_info': info,
                                                 'signature_algorithm': {
                                                     'algorithm': algorithm,
-                                                    'parameters': None,
+                                                    'parameters': params
                                                 },
                                                 'signature': signature})
 
@@ -252,20 +287,21 @@ class PKIHSM(PKI):
         """ Gets the configured PKCS slot """
         lib = pkcs11.lib(self._pkcs_config['library'])
         slots = lib.get_slots(token_present=True)
-        slot = None
+        found_slot = None
 
         # Find the slot identified in the PKCS component configuration
         for slot in slots:
             if slot.slot_id == self._pkcs_config['slot']:
+                found_slot = slot
                 break
 
-        return slot
+        return found_slot
 
     def _get_session(self, rw=False):
         """ Gets a session to the token from the configured PKCS slot """
         slot = self._get_slot()
         token = slot.get_token()
-        print(f'Found slot. Token = {token}')
+        print(f'Found slot {slot}. Token = {token}')
 
         session = token.open(rw, user_pin=self._pkcs_config['userPin'])
 

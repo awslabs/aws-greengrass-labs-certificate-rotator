@@ -127,11 +127,14 @@ def test_create_csr_rsa(mocker, pkihsm, pkcs11_session, config, csr_request_info
     encode_rsa_public_key.assert_called_once_with(pending_pub_key_object)
     pending_pub_key_object.destroy.assert_called_once()
     mech = SIGNING_ALGORITHMS[config.signing_algorithm]['mech']
-    pending_priv_key_object.sign.assert_called_once_with(CSR_REQUEST_INFO_DATA, mechanism=mech)
+    mech_param = SIGNING_ALGORITHMS[config.signing_algorithm]['mech_param']
+    pending_priv_key_object.sign.assert_called_once_with(CSR_REQUEST_INFO_DATA, mechanism=mech,
+                                                         mechanism_param=mech_param)
+    params = SIGNING_ALGORITHMS[config.signing_algorithm]['params']
     csr_request.assert_called_once_with({'certification_request_info': csr_request_info.return_value,
                                                 'signature_algorithm': {
                                                     'algorithm': SIGNING_ALGORITHMS[config.signing_algorithm]['name'],
-                                                    'parameters': None,
+                                                    'parameters': params,
                                                 },
                                                 'signature': CSR_SIGNATURE})
 
@@ -171,12 +174,15 @@ def test_create_csr_ec(mocker, pkihsm, pkcs11_session, config, csr_request_info)
                                             capabilities=MechanismFlag.SIGN|MechanismFlag.DECRYPT|MechanismFlag.UNWRAP)
     pending_pub_key_object.destroy.assert_called_once()
     mech = SIGNING_ALGORITHMS[config.signing_algorithm]['mech']
-    pending_priv_key_object.sign.assert_called_once_with(CSR_REQUEST_INFO_DATA, mechanism=mech)
+    mech_param = SIGNING_ALGORITHMS[config.signing_algorithm]['mech_param']
+    pending_priv_key_object.sign.assert_called_once_with(CSR_REQUEST_INFO_DATA, mechanism=mech,
+                                                         mechanism_param=mech_param)
     encode_ecdsa_signature.assert_called_once_with(CSR_SIGNATURE)
+    params = SIGNING_ALGORITHMS[config.signing_algorithm]['params']
     csr_request.assert_called_once_with({'certification_request_info': csr_request_info.return_value,
                                                 'signature_algorithm': {
                                                     'algorithm': SIGNING_ALGORITHMS[config.signing_algorithm]['name'],
-                                                    'parameters': None,
+                                                    'parameters': params,
                                                 },
                                                 'signature': CSR_SIGNATURE})
 

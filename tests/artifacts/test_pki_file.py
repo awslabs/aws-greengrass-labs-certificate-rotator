@@ -73,8 +73,10 @@ def test_create_csr_rsa(mocker, pkifile, config, csr_builder):
                                                       format=serialization.PrivateFormat.TraditionalOpenSSL,
                                                       encryption_algorithm=ANY)
     csr_builder.subject_name.assert_called_once_with(CERTIFICATE_SUBJECT)
+    padding = SIGNING_ALGORITHMS[config.signing_algorithm]['padding']
     csr_builder.subject_name().sign.assert_called_once_with(private_key,
-                                                            SIGNING_ALGORITHMS[config.signing_algorithm]['hash'])
+                                                            SIGNING_ALGORITHMS[config.signing_algorithm]['hash'],
+                                                            rsa_padding=padding)
 
 def test_create_csr_ec(mocker, pkifile, config, csr_builder):
     """ Create CSR with EC private key and signing algorithm """
@@ -91,8 +93,10 @@ def test_create_csr_ec(mocker, pkifile, config, csr_builder):
                                                       format=serialization.PrivateFormat.PKCS8,
                                                       encryption_algorithm=ANY)
     csr_builder.subject_name.assert_called_once_with(CERTIFICATE_SUBJECT)
+    padding = SIGNING_ALGORITHMS[config.signing_algorithm]['padding']
     csr_builder.subject_name().sign.assert_called_once_with(private_key,
-                                                            SIGNING_ALGORITHMS[config.signing_algorithm]['hash'])
+                                                            SIGNING_ALGORITHMS[config.signing_algorithm]['hash'],
+                                                            rsa_padding=padding)
 
 def test_create_csr_mismatched_family(mocker, pkifile, config):
     """ Mismatched encryption family for key and signing algorithms results in no CSR """
