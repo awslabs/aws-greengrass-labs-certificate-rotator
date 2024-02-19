@@ -93,8 +93,8 @@ def get_rotation_progress(event):
     """ Gets the progress indicator from the status details of the job execution """
     progress = None
 
-    if 'statusDetails' in event and 'progress' in event['statusDetails']:
-        progress = event['statusDetails']['progress']
+    if 'statusDetails' in event and 'certificateRotationProgress' in event['statusDetails']:
+        progress = event['statusDetails']['certificateRotationProgress']
 
     return progress
 

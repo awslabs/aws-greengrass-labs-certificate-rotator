@@ -25,7 +25,9 @@ def valid_job_execution(iot_jobs_data, event):
     # The Thing should have an IN_PROGRESS job execution with no status details
     return job_execution is not None and job_execution['status'] == 'IN_PROGRESS' and\
             job_execution['jobDocument'] == os.environ.get('JOB_DOCUMENT') and\
-            ('statusDetails' not in job_execution or len(job_execution['statusDetails']) == 0)
+            'statusDetails' in job_execution and len(job_execution['statusDetails']) == 1 and\
+            'certificateRotationProgress' in job_execution['statusDetails'] and\
+            job_execution['statusDetails']['certificateRotationProgress'] == 'started'
 
 
 def valid_thing_principals(thing_principals):
@@ -138,7 +140,7 @@ def create_certificate(iot, iot_jobs_data, event, thing_principals):
 
         # We'll remember the certificate IDs in the job execution status details
         status_details = {
-            'progress': 'created',
+            'certificateRotationProgress': 'created',
             'oldCertificateId': event['principal'],
             'newCertificateId': cert_response['certificateId']
         }

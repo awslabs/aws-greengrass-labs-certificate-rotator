@@ -39,7 +39,7 @@ def fixture_event(mocker, boto3_client, principals):
         'status': 'SUCCEEDED',
         'statusDetails': {
             'newCertificateId': NEW_CERT_ID,
-            'progress': 'committed',
+            'certificateRotationProgress': 'committed',
             'oldCertificateId': OLD_CERT_ID
         }
     }
@@ -156,7 +156,7 @@ def test_wrong_job_document(boto3_client, event):
 def test_job_failed_after_create(boto3_client, event):
     """ This is a standard rollback. The new certificate should be deleted """
     event['status'] = 'FAILED'
-    event['statusDetails']['progress'] = 'created'
+    event['statusDetails']['certificateRotationProgress'] = 'created'
     cert_desc = {'certificateDescription': {'status': 'ACTIVE', 'certificateArn': NEW_CERT_ARN}}
     boto3_client.describe_certificate.return_value = cert_desc
     handler(event, None)
@@ -166,7 +166,7 @@ def test_job_failed_after_create(boto3_client, event):
 def test_job_failed_after_commit(boto3_client, event):
     """ We should not delete any certificate, but should send a notification """
     event['status'] = 'FAILED'
-    event['statusDetails']['progress'] = 'committed'
+    event['statusDetails']['certificateRotationProgress'] = 'committed'
     handler(event, None)
     confirm_certificate_not_deleted(boto3_client)
     boto3_client.publish.assert_called_once()
@@ -174,7 +174,7 @@ def test_job_failed_after_commit(boto3_client, event):
 def test_job_timed_out_before_create(boto3_client, event):
     """ We should not delete any certificate, but should send a notification """
     event['status'] = 'TIMED_OUT'
-    del event['statusDetails']['progress']
+    del event['statusDetails']['certificateRotationProgress']
     handler(event, None)
     confirm_certificate_not_deleted(boto3_client)
     boto3_client.publish.assert_called_once()
@@ -182,7 +182,7 @@ def test_job_timed_out_before_create(boto3_client, event):
 def test_job_timed_out_after_create(boto3_client, event):
     """ This is a rollback. The new certificate should be deleted """
     event['status'] = 'TIMED_OUT'
-    event['statusDetails']['progress'] = 'created'
+    event['statusDetails']['certificateRotationProgress'] = 'created'
     cert_desc = {'certificateDescription': {'status': 'ACTIVE', 'certificateArn': NEW_CERT_ARN}}
     boto3_client.describe_certificate.return_value = cert_desc
     handler(event, None)
@@ -192,7 +192,7 @@ def test_job_timed_out_after_create(boto3_client, event):
 def test_job_timed_out_after_commit(boto3_client, event):
     """ We should not delete any certificate, but should send a notification """
     event['status'] = 'TIMED_OUT'
-    event['statusDetails']['progress'] = 'committed'
+    event['statusDetails']['certificateRotationProgress'] = 'committed'
     handler(event, None)
     confirm_certificate_not_deleted(boto3_client)
     boto3_client.publish.assert_called_once()

@@ -167,7 +167,8 @@ class Greengrass():
                 response = self._iot_jobs_data_client.describe_job_execution(jobId=job_id, thingName=thing)
                 execution = response['execution']
                 if execution['status'] == 'IN_PROGRESS' and 'statusDetails' in execution and\
-                    'progress' in execution['statusDetails'] and execution['statusDetails']['progress'] == 'created':
+                    'certificateRotationProgress' in execution['statusDetails'] and\
+                    execution['statusDetails']['certificateRotationProgress'] == 'created':
                     self._logger.info('Deactivating new certificate for: %s', thing)
                     certificate_id = execution['statusDetails']['newCertificateId']
                     self._iot_client.update_certificate(certificateId=certificate_id, newStatus='INACTIVE')

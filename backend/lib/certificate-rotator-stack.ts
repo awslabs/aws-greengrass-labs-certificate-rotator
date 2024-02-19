@@ -49,7 +49,7 @@ export class CertificateRotatorStack extends cdk.Stack {
     this.createRule('CommitCertificate', commitCertificateLambda, 
                     `SELECT *, topic(3) AS thingName, topic() as topic, clientid() AS clientId, principal() AS principal FROM 'awslabs/things/+/certificate/commit'`)
     this.createRule('JobExecutionTerminal', jobExecutionTerminalLambda, 
-                    `SELECT * FROM '$aws/events/jobExecution/#' WHERE isUndefined(get(statusDetails, 'detailed-deployment-status')) = true`)
+                    `SELECT * FROM '$aws/events/jobExecution/#' WHERE isUndefined(statusDetails.certificateRotationProgress) = false`)
 
     this.createJobExecutionEventsCustomResource()
   }
