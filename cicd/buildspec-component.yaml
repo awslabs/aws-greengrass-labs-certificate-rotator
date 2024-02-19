@@ -8,7 +8,7 @@ phases:
     commands:
       # Install pre-requisite tools
       - pip3 install -r requirements.txt
-      - pip3 install git+https://github.com/aws-greengrass/aws-greengrass-gdk-cli.git@v1.3.0
+      - pip3 install git+https://github.com/aws-greengrass/aws-greengrass-gdk-cli.git@v1.6.2
 
       # Log the versions of all tools
       - python3 --version
