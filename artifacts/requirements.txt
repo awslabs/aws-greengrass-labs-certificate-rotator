@@ -15,13 +15,13 @@
 # sudo su ggc_user
 # curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 #
-# The Rust installation also then needs to added to your asystem path. This can be
+# The Rust installation also then needs to added to your system path. This can be
 # done by adding /home/ggc_user/.cargo/bin to the secure_path variable in the
 # /etc/sudoers file.
 
 asn1crypto==1.5.1
-awsiotsdk==1.17.0
-cryptography==42.0.2
+awsiotsdk==1.21.0
+cryptography==42.0.3
 python-pkcs11==0.7.0; platform_system == "Linux" and python_version >= '3.7'
 PyYAML==6.0.1
 wheel; platform_system == "Linux" and python_version >= '3.7'
