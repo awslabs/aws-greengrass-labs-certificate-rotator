@@ -24,8 +24,8 @@ def valid_job_execution(job_execution):
     return job_execution is not None and job_execution['status'] == 'IN_PROGRESS' and\
             job_execution['jobDocument'] == os.environ.get('JOB_DOCUMENT') and\
             'statusDetails' in job_execution and len(job_execution['statusDetails']) == 3 and\
-            'progress' in job_execution['statusDetails'] and\
-            job_execution['statusDetails']['progress'] == 'created' and\
+            'certificateRotationProgress' in job_execution['statusDetails'] and\
+            job_execution['statusDetails']['certificateRotationProgress'] == 'created' and\
             'oldCertificateId' in job_execution['statusDetails'] and\
             'newCertificateId' in job_execution['statusDetails']
 
@@ -76,7 +76,7 @@ def handler(event, context):
 
         # Mark in the status details that we committed to the new certificate
         status_details = job_execution['statusDetails']
-        status_details['progress'] = 'committed'
+        status_details['certificateRotationProgress'] = 'committed'
 
         # Update the job execution with the committed status
         iot_jobs_data.update_job_execution(jobId=event['jobId'],

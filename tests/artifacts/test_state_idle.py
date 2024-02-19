@@ -27,8 +27,9 @@ def test_transition_to_state_updating_job(state_machine, state_idle):
 
     state_idle.on_rx_message(f'{TOPIC_BASE_JOBS}/notify-next', message)
 
+    expected_publish_msg = { 'status': 'IN_PROGRESS', 'statusDetails': { 'certificateRotationProgress': 'started' } }
     state_machine.publish.assert_called_once_with(f'{TOPIC_BASE_JOBS}/{message["execution"]["jobId"]}/update',
-                                                    json.dumps({ 'status': 'IN_PROGRESS' }))
+                                                    json.dumps(expected_publish_msg))
     state_machine.change_state.assert_called_once_with(StateUpdatingJob)
 
 def test_non_job_topic_is_ignored(state_machine, state_idle):

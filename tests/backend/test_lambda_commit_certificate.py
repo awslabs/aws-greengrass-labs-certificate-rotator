@@ -27,7 +27,7 @@ def fixture_job_execution():
             'statusDetails': {
                 'newCertificateId': NEW_CERT_ID,
                 'oldCertificateId': OLD_CERT_ID,
-                'progress': 'created'
+                'certificateRotationProgress': 'created'
             },
             'jobDocument': JOB_DOCUMENT
         }
@@ -73,7 +73,7 @@ def confirm_succeeded(boto3_client):
                                                               statusDetails={
                                                                     'newCertificateId': NEW_CERT_ID,
                                                                     'oldCertificateId': OLD_CERT_ID,
-                                                                    'progress': 'committed'
+                                                                    'certificateRotationProgress': 'committed'
                                                                 })
     boto3_client.publish.assert_called_once_with(topic=f'{TOPIC}/accepted', qos=0, payload=json.dumps({}))
 
@@ -113,13 +113,13 @@ def test_commit_failed_job_execution_no_status_details(boto3_client, event, job_
 
 def test_commit_failed_job_execution_status_details_no_progress(boto3_client, event, job_execution):
     """ Commit fails if the job execution status details is missing the progress field """
-    del job_execution['execution']['statusDetails']['progress']
+    del job_execution['execution']['statusDetails']['certificateRotationProgress']
     handler(event, None)
     confirm_failed(boto3_client)
 
 def test_commit_failed_job_execution_wrong_progress(boto3_client, event, job_execution):
     """ Commit fails if the job execution has status details with wrong progress """
-    job_execution['execution']['statusDetails']['progress'] = 'something else'
+    job_execution['execution']['statusDetails']['certificateRotationProgress'] = 'something else'
     handler(event, None)
     confirm_failed(boto3_client)
 

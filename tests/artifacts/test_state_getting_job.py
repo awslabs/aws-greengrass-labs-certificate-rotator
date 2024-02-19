@@ -31,6 +31,9 @@ def test_transition_to_state_updating_job(state_machine, state_getting_job):
     """ Confirm that transition to StateUpdatingJob occurs """
     message = create_message('QUEUED')
     state_getting_job.on_rx_message(f'{TOPIC_BASE_JOBS}/{message["execution"]["jobId"]}/get/accepted', message)
+    expected_publish_msg = { 'status': 'IN_PROGRESS', 'statusDetails': { 'certificateRotationProgress': 'started' } }
+    state_machine.publish.assert_called_once_with(f'{TOPIC_BASE_JOBS}/{message["execution"]["jobId"]}/update',
+                                                    json.dumps(expected_publish_msg))
     state_machine.change_state.assert_called_once_with(StateUpdatingJob)
 
 def test_transition_to_state_creating_certificate(state_machine, state_getting_job):

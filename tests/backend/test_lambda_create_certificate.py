@@ -30,6 +30,9 @@ def fixture_job_execution():
         'execution' : {
             'jobId': JOB_ID,
             'status': 'IN_PROGRESS',
+            'statusDetails': {
+                'certificateRotationProgress': 'started'
+            },
             'jobDocument': JOB_DOCUMENT
         }
     }
@@ -99,7 +102,7 @@ def confirm_succeeded(boto3_client, event, principals):
                                                               statusDetails={
                                                                     'newCertificateId': NEW_CERT_ID,
                                                                     'oldCertificateId': OLD_CERT_ID,
-                                                                    'progress': 'created'
+                                                                    'certificateRotationProgress': 'created'
                                                                 })
     boto3_client.publish.assert_called_once_with(topic=f'{TOPIC}/accepted', qos=0,
                                                  payload=json.dumps({ 'certificatePem': NEW_CERT_PEM }))

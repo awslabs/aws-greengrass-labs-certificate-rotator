@@ -25,7 +25,7 @@ class StateGettingJob(State):
             if message['execution']['status'] == 'QUEUED':
                 # There is a new rotation job (created before we started up)
                 topic = f'{TOPIC_BASE_JOBS}/{message["execution"]["jobId"]}/update'
-                request = { 'status': 'IN_PROGRESS' }
+                request = { 'status': 'IN_PROGRESS', 'statusDetails': { 'certificateRotationProgress': 'started' } }
                 self._context.change_state(StateUpdatingJob)
                 self._context.publish(topic, json.dumps(request))
             elif message['execution']['status'] == 'IN_PROGRESS':
