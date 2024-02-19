@@ -1,5 +1,5 @@
 ---
-RecipeFormatVersion: 2020-01-25
+RecipeFormatVersion: '2020-01-25'
 ComponentName: COMPONENT_NAME
 ComponentVersion: COMPONENT_VERSION
 ComponentDescription: Certificate Rotator
