@@ -13,7 +13,7 @@ from topic_base import TOPIC_BASE_JOBS, TOPIC_BASE_CERT
 
 class StateGettingJob(State):
     """ Certificate rotator state: Getting Job """
-    def on_rx_message(self, topic, message):
+    def on_rx_message(self, topic: str, message: dict) -> None:
         if topic.startswith(TOPIC_BASE_JOBS) and topic.endswith('get/accepted') and\
             'execution' in message and\
             'operation' in message['execution']['jobDocument'] and\
@@ -46,7 +46,7 @@ class StateGettingJob(State):
             # got some other unexpected topic)
             self._context.change_state_idle()
 
-    def on_timeout(self):
+    def on_timeout(self) -> None:
         # We timed out trying to get the next job. It means we don't have
         # comms with IoT Core, just after Greengrass has started up. If we
         # have a certificate backup, it means we are trying to rotate the

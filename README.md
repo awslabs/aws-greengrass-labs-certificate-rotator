@@ -158,7 +158,7 @@ This component [supports all platforms and architectures supported by Greengrass
 
 ### Python Requirements
 
-This component requires **python3**, **python3-venv** and **pip3** to be installed on the core device.
+This component requires **python3**, **python3-venv** and **pip3** to be installed on the core device. The minimum required Python version is 3.8.
 
 ### Hardware Security Module
 
@@ -419,6 +419,14 @@ Static analysis is performed using [Pylint](https://pylint.org/). Example execut
 
 ```
 pylint artifacts backend/lambda libs tests *.py
+```
+
+## Static Type Checking
+
+Static type checking is performed using [mypy](https://mypy-lang.org/). Example execution:
+
+```
+mypy --ignore-missing-imports artifacts
 ```
 
 ## Unit Tests

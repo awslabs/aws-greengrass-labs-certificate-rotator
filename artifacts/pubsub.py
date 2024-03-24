@@ -8,7 +8,9 @@ Thin wrapper around the IPC V2 client IoT Core publish/subscribe APIs
 import json
 import sys
 import traceback
+import typing
 
+from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
 from awsiot.greengrasscoreipc.model import (
     IoTCoreMessage,
     QOS,
@@ -16,11 +18,11 @@ from awsiot.greengrasscoreipc.model import (
 
 class PubSub():
     """ Minimal IoT Core publish/subscribe wrapper """
-    def __init__(self, ipc_client, subscription_callback):
+    def __init__(self, ipc_client: GreengrassCoreIPCClientV2, subscription_callback: typing.Callable[[str, str], None]):
         self._ipc_client = ipc_client
         self._subscription_callback = subscription_callback
 
-    def publish(self, topic, message) -> bool:
+    def publish(self, topic: str, message: str) -> bool:
         """ Publishes a message to IoT Core """
         print(f'Publishing message on topic {topic}: {message}')
         try:
@@ -32,7 +34,7 @@ class PubSub():
 
         return rval
 
-    def subscribe(self, topic) -> bool:
+    def subscribe(self, topic: str) -> bool:
         """ Subscribes to an IoT Core topic """
         print(f'Subscribing to topic {topic}')
         try:

@@ -12,7 +12,7 @@ from topic_base import TOPIC_BASE_JOBS, TOPIC_BASE_CERT
 
 class StateUpdatingJob(State):
     """ Certificate rotator state: Updating Job """
-    def on_rx_message(self, topic, message):
+    def on_rx_message(self, topic: str, message: dict) -> None:
         if topic.startswith(TOPIC_BASE_JOBS):
             if topic.endswith('update/rejected'):
                 self._context.change_state_idle()
@@ -34,5 +34,5 @@ class StateUpdatingJob(State):
                     print('Error creating the CSR.')
                     self._context.fail_the_job()
 
-    def on_timeout(self):
+    def on_timeout(self) -> None:
         self._context.change_state_idle()
