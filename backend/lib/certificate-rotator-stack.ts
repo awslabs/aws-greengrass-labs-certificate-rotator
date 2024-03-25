@@ -180,7 +180,7 @@ export class CertificateRotatorStack extends cdk.Stack {
     const lambdaFunction = new lambda.Function(this, `${lambdaFunctionName}Lambda`, {
       functionName: lambdaFunctionName,
       description: `AWS Labs Certificate Rotator: ${name}`,
-      runtime: lambda.Runtime.PYTHON_3_9,
+      runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset(`lambda/${sourceName}`),
       handler: `${sourceName}.handler`,
       retryAttempts: 0,
