@@ -21,7 +21,7 @@
 
 asn1crypto==1.5.1
 awsiotsdk==1.21.0
-cryptography==42.0.3
+cryptography==42.0.4
 python-pkcs11==0.7.0; platform_system == "Linux" and python_version >= '3.7'
 PyYAML==6.0.1
 wheel; platform_system == "Linux" and python_version >= '3.7'
