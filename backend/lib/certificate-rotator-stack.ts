@@ -33,8 +33,8 @@ export class CertificateRotatorStack extends cdk.Stack {
     const jobTerminalEnv = this.createJobTerminalEnv(topic)
 
     const createCertificateLambda = this.createLambda('CreateCertificate', 'create_certificate', 60, createCertEnv);
-    const commitCertificateLambda = this.createLambda('CommitCertificate', 'commit_certificate', 3, commitCertEnv);
-    const jobExecutionTerminalLambda = this.createLambda('JobExecutionTerminal', 'job_execution_terminal', 3, jobTerminalEnv);
+    const commitCertificateLambda = this.createLambda('CommitCertificate', 'commit_certificate', 10, commitCertEnv);
+    const jobExecutionTerminalLambda = this.createLambda('JobExecutionTerminal', 'job_execution_terminal', 10, jobTerminalEnv);
 
     // The lambdas need some extra rights
     createCertificateLambda.role?.attachInlinePolicy(this.createCertificateLambdaPolicy())

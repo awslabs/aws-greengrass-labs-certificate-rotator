@@ -67,7 +67,7 @@ class Greengrass():
         self._logger.info('Current deployment ID: %s', deployment_id)
 
         # Get the details of the deployment
-        deployment = self._greengrassv2_client.get_deployment(deploymentId=deployment_id)
+        deployment = self._get_deployment(deployment_id)
         self._logger.info('Deployment details: %s', deployment)
 
         # Update with the configuration to merge
@@ -86,7 +86,7 @@ class Greengrass():
         )['deploymentId']
         self._logger.info('Created deployment ID: %s', deployment_id)
 
-        iot_job_id = self._greengrassv2_client.get_deployment(deploymentId=deployment_id)['iotJobId']
+        iot_job_id = self._get_deployment(deployment_id)['iotJobId']
         (succeeded, failed, timed_out) = self.wait_for_job_to_finish(iot_job_id)
 
         return succeeded > 0 and failed == 0 and timed_out == 0
@@ -155,16 +155,18 @@ class Greengrass():
 
     def deactivate_new_certificates(self, job_id):
         """ Deactivates new certificates as they're created so reconnection will fail, triggering a rollback """
-        # Allow some time for the job to be fully furnished with all of the executions
-        time.sleep(5)
-
         things = self._iot_client.list_things_in_thing_group(thingGroupName=self._thing_group_name)['things']
 
         while len(things) > 0:
             self._logger.info('Things still processing: %s', len(things))
 
             for thing in things:
-                response = self._iot_jobs_data_client.describe_job_execution(jobId=job_id, thingName=thing)
+                try:
+                    response = self._iot_jobs_data_client.describe_job_execution(jobId=job_id, thingName=thing)
+                except self._iot_jobs_data_client.exceptions.ResourceNotFoundException:
+                    self._logger.info('Job execution not found yet for: %s', thing)
+                    continue
+
                 execution = response['execution']
                 if execution['status'] == 'IN_PROGRESS' and 'statusDetails' in execution and\
                     'certificateRotationProgress' in execution['statusDetails'] and\
@@ -237,3 +239,20 @@ class Greengrass():
                     public_key.key_size == KEY_ALGORITHMS[key_algorithm]['size']
 
         return valid
+
+    def _get_deployment(self, deployment_id):
+        """ Gets the deployment, allowing for eventual consistency of the API """
+        deployment = None
+        snapshot = time.time()
+
+        while deployment is None:
+            try:
+                deployment = self._greengrassv2_client.get_deployment(deploymentId=deployment_id)
+            except self._greengrassv2_client.exceptions.ResourceNotFoundException as e:
+                self._logger.info('Deployment %s not yet found', deployment_id)
+                if (time.time() - snapshot) < 10:
+                    time.sleep(1)
+                else:
+                    raise e
+
+        return deployment
