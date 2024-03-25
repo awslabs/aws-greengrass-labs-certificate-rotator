@@ -8,6 +8,7 @@ State machine for the certificate rotation process - Context role in the pattern
 import json
 from threading import Timer
 import time
+import typing
 from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
 from effective_config import EffectiveConfig
 from pubsub import PubSub
@@ -16,6 +17,8 @@ from pki_file import PKIFile
 from state_idle import StateIdle
 from state_getting_job import StateGettingJob
 from topic_base import TOPIC_BASE_JOBS, TOPIC_BASE_CERT
+if typing.TYPE_CHECKING:
+    from state import State # pragma: no cover
 
 class StateMachine():
     """ State machine for managing the certificate rotation process """
@@ -37,21 +40,21 @@ class StateMachine():
         self._job_id = None
 
     @property
-    def pki(self):
+    def pki(self) -> typing.Union[PKIFile, PKIHSM]:
         """ Getter for the PKI """
         return self._pki
 
     @property
-    def job_id(self):
+    def job_id(self) -> str:
         """ Getter for the job ID """
         return self._job_id
 
     @job_id.setter
-    def job_id(self, value):
+    def job_id(self, value: str):
         """ Setter for the job ID """
         self._job_id = value
 
-    def start(self):
+    def start(self) -> None:
         """ Starts the state machine """
         print('Starting the state machine')
 
@@ -80,20 +83,21 @@ class StateMachine():
             self._running = True
             self._pubsub_client.publish(f'{TOPIC_BASE_JOBS}/$next/get','{}')
 
-    def stop(self):
+    def stop(self) -> None:
         """ Stops the state machine """
         print('Stopping the state machine')
         self._running = False
 
-    def running(self):
+    def running(self) -> bool:
         """ Indicates whether state machine is running"""
         return self._running
 
-    def change_state_idle(self):
+    def change_state_idle(self) -> None:
         """ Changes the state of the state machine to Idle """
         self.change_state(StateIdle)
 
-    def change_state(self, new_state_class):
+    TState = typing.TypeVar('TState', bound='State')
+    def change_state(self, new_state_class: typing.Type[TState]) -> None:
         """ Changes the state of the state machine """
         print(f'Changing state to {new_state_class.__name__}')
 
@@ -111,21 +115,21 @@ class StateMachine():
 
         self._state = self._states[new_state_class.__name__]
 
-    def publish(self, topic, message):
+    def publish(self, topic: str, message: str) -> None:
         """ Publishes a message to IoT Core """
         self._pubsub_client.publish(topic, message)
 
-    def on_rx_message(self, topic, message):
+    def on_rx_message(self, topic: str, message: str) -> None:
         """ Handles a message received on our subscribed topics """
         if self._running:
             self._state.on_rx_message(topic, message)
 
-    def on_timeout(self):
+    def on_timeout(self) -> None:
         """ Handles a state timeout """
         if self._running:
             self._state.on_timeout()
 
-    def fail_the_job(self):
+    def fail_the_job(self) -> None:
         """ Marks the job as failed """
         print('Failing the certificate rotation job.')
         topic = f'{TOPIC_BASE_JOBS}/{self._job_id}/update'
@@ -133,7 +137,7 @@ class StateMachine():
         self.publish(topic, json.dumps(request))
         self.change_state_idle()
 
-    def _create_ipc_client(self):
+    def _create_ipc_client(self) -> typing.Union[GreengrassCoreIPCClientV2, None]:
         """ Instantiates the IPC client """
         ipc_client = None
 
@@ -149,7 +153,7 @@ class StateMachine():
 
         return ipc_client
 
-    def _create_subscriptions(self):
+    def _create_subscriptions(self) -> bool:
         """ Subscribes to all the required topics """
         SUBSCRIPTION_TOPICS = [
             f'{TOPIC_BASE_JOBS}/notify-next',

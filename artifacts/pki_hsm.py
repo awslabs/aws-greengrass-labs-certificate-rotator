@@ -8,8 +8,10 @@ Public Key Infrastructure (PKI) for HSM storage
 import platform
 import sys
 import traceback
+import typing
 from cryptography.hazmat.primitives import hashes
 from pki import PKI
+from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
 
 # Greengrass HSM/PKCS is only supported on Linux. And the python-pkcs11
 # module requires Python 3.7 or above. So we don't import these
@@ -23,7 +25,17 @@ if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
     from pkcs11.util.ec import encode_ecdsa_signature, encode_named_curve_parameters
     from asn1crypto import pem, x509, csr, keys, core, algos
 
-    KEY_ALGORITHMS = {
+    class RsaKeyAlgorithm(typing.TypedDict):
+        """ Types hints for RSA key algorithm dictionary """
+        size: int
+        type: KeyType
+
+    class EcKeyAlgorithm(typing.TypedDict):
+        """ Types hints for EC key algorithm dictionary """
+        curve: str
+        type: KeyType
+
+    KEY_ALGORITHMS: typing.Dict[str, typing.Union[RsaKeyAlgorithm, EcKeyAlgorithm]] = {
         'RSA-2048': { 'size': 2048, 'type': KeyType.RSA },
         'RSA-3072': { 'size': 3072, 'type': KeyType.RSA },
         'ECDSA-P256': { 'curve': 'secp256r1', 'type': KeyType.EC },
@@ -33,7 +45,7 @@ if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
 
     class Params(algos.RSASSAPSSParams):
         """ RSA PSS parameters for ASN.1 CSR creation """
-        def __init__(self, hash_alg, salt_size):
+        def __init__(self, hash_alg: str, salt_size: int):
             super().__init__({
                 'hash_algorithm': algos.DigestAlgorithm({'algorithm': hash_alg}),
                 'mask_gen_algorithm': algos.MaskGenAlgorithm({
@@ -46,7 +58,15 @@ if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
                 'trailer_field': algos.TrailerField(1)
             })
 
-    SIGNING_ALGORITHMS = {
+    class SigningAlgorithm(typing.TypedDict):
+        """ Types hints for signing algorithms dictionary """
+        name: str
+        params: typing.Optional[Params]
+        mech: Mechanism
+        mech_param: typing.Optional[typing.Tuple[Mechanism, MGF, int]]
+        type: KeyType
+
+    SIGNING_ALGORITHMS: typing.Dict[str, SigningAlgorithm] = {
         'SHA256WITHRSA': { 'name': 'sha256_rsa', 'params': None, 'mech': Mechanism.SHA256_RSA_PKCS,
                             'mech_param': None, 'type': KeyType.RSA },
         'SHA384WITHRSA': { 'name': 'sha384_rsa', 'params': None, 'mech': Mechanism.SHA384_RSA_PKCS,
@@ -69,12 +89,14 @@ if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
                                     'type': KeyType.RSA },
 
         'ECDSA-WITH-SHA256': { 'name': 'sha256_ecdsa', 'params': None, 'mech': Mechanism.ECDSA,
-                                'mech_param': None, 'hash': hashes.SHA256(), 'type': KeyType.EC },
+                                'mech_param': None, 'type': KeyType.EC },
         'ECDSA-WITH-SHA384': { 'name': 'sha384_ecdsa', 'params': None, 'mech': Mechanism.ECDSA,
-                                'mech_param': None, 'hash': hashes.SHA384(), 'type': KeyType.EC },
+                                'mech_param': None, 'type': KeyType.EC },
         'ECDSA-WITH-SHA512': { 'name': 'sha512_ecdsa', 'params': None, 'mech': Mechanism.ECDSA,
-                                'mech_param': None, 'hash': hashes.SHA512(), 'type': KeyType.EC }
+                                'mech_param': None, 'type': KeyType.EC }
     }
+
+    HASHES = { 'sha256_ecdsa': hashes.SHA256(), 'sha384_ecdsa': hashes.SHA384(), 'sha512_ecdsa': hashes.SHA512() }
 
 class PKIHSM(PKI):
     """ Public Key Infrastructure (PKI) for HSM storage """
@@ -82,7 +104,7 @@ class PKIHSM(PKI):
     SUFFIX_PENDING = 1
     SUFFIX_BACKUP = 2
 
-    def __init__(self, ipc_client):
+    def __init__(self, ipc_client: GreengrassCoreIPCClientV2):
         super().__init__(ipc_client, KEY_ALGORITHMS, SIGNING_ALGORITHMS)
         self._label = self._effective_config.certificate_file_path().split('=')[1].split(';')[0]
         print(f'Using PKIHSM. PKCS object label = {self._label}')
@@ -90,7 +112,7 @@ class PKIHSM(PKI):
         self._label_pending = f'{self._label}.pending'
         self._pkcs_config = PKIHSM.get_pkcs_configuration(ipc_client)
 
-    def create_csr(self):
+    def create_csr(self) -> typing.Optional[str]:
         """ Creates a certificate signing request from a new private key """
         # Read/write session since we will modify the token contents
         session = self._get_session(rw=True)
@@ -115,7 +137,7 @@ class PKIHSM(PKI):
             # hash externally and only ask the HSM to sign using ECDSA mechanism.
             if pending_priv_key.key_type == KeyType.EC:
                 print('Hashing the CSR information prior to signing in the HSM')
-                digest = hashes.Hash(SIGNING_ALGORITHMS[self._config.signing_algorithm]['hash'])
+                digest = hashes.Hash(HASHES[SIGNING_ALGORITHMS[self._config.signing_algorithm]['name']])
                 digest.update(info.dump())
                 data = digest.finalize()
             else:
@@ -153,7 +175,7 @@ class PKIHSM(PKI):
 
         return new_csr_pem
 
-    def rotate(self, new_cert_pem):
+    def rotate(self, new_cert_pem: str) -> bool:
         """ Rotates from the old to new certificate and private key """
         # Read/write session since we will modify the token contents
         session = self._get_session(rw=True)
@@ -209,7 +231,7 @@ class PKIHSM(PKI):
 
         return success
 
-    def rollback(self):
+    def rollback(self) -> bool:
         """ Rolls back to the old certificate and private key """
         # Read/write session since we will modify the token contents
         session = self._get_session(rw=True)
@@ -259,7 +281,7 @@ class PKIHSM(PKI):
 
         return success
 
-    def backup_exists(self):
+    def backup_exists(self) -> bool:
         """ Indicates whether the backup certificate and private key exists """
         # Read-only session since we won't modify the token contents
         session = self._get_session(rw=False)
@@ -274,7 +296,7 @@ class PKIHSM(PKI):
         # at an inopportune moment, it may be that only one exists.
         return backup_cert_object is not None and backup_priv_key is not None
 
-    def delete_backup(self):
+    def delete_backup(self) -> None:
         """ Deletes the backup certificate and private key """
         # Read/write session since we will modify the token contents
         session = self._get_session(rw=True)

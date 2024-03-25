@@ -8,12 +8,24 @@ Public Key Infrastructure (PKI) for file storage on disk
 import os
 import shutil
 import traceback
+import typing
 from cryptography.x509 import CertificateSigningRequestBuilder, load_pem_x509_certificate
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, ec, padding
 from pki import PKI
+from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
 
-KEY_ALGORITHMS = {
+class RsaKeyAlgorithm(typing.TypedDict):
+    """ Types hints for RSA key algorithm dictionary """
+    size: int
+    type: typing.Type[rsa.RSAPrivateKey]
+
+class EcKeyAlgorithm(typing.TypedDict):
+    """ Types hints for EC key algorithm dictionary """
+    curve: typing.Union[ec.SECP256R1, ec.SECP384R1, ec.SECP521R1]
+    type: typing.Type[ec.EllipticCurvePrivateKey]
+
+KEY_ALGORITHMS: typing.Dict[str, typing.Union[RsaKeyAlgorithm, EcKeyAlgorithm]] = {
     'RSA-2048': { 'size': 2048, 'type': rsa.RSAPrivateKey },
     'RSA-3072': { 'size': 3072, 'type': rsa.RSAPrivateKey },
     'ECDSA-P256': { 'curve': ec.SECP256R1(), 'type': ec.EllipticCurvePrivateKey },
@@ -21,7 +33,13 @@ KEY_ALGORITHMS = {
     'ECDSA-P521': { 'curve': ec.SECP521R1(), 'type': ec.EllipticCurvePrivateKey }
 }
 
-SIGNING_ALGORITHMS = {
+class SigningAlgorithm(typing.TypedDict):
+    """ Types hints for signing algorithms dictionary """
+    hash: typing.Union[hashes.SHA256, hashes.SHA384, hashes.SHA512]
+    type: typing.Union[typing.Type[rsa.RSAPrivateKey], typing.Type[ec.EllipticCurvePrivateKey]]
+    padding: typing.Optional[padding.PSS]
+
+SIGNING_ALGORITHMS: typing.Dict[str, SigningAlgorithm] = {
     'SHA256WITHRSA': { 'hash': hashes.SHA256(), 'type': rsa.RSAPrivateKey, 'padding': None },
     'SHA384WITHRSA': { 'hash': hashes.SHA384(), 'type': rsa.RSAPrivateKey, 'padding': None },
     'SHA512WITHRSA': { 'hash': hashes.SHA512(), 'type': rsa.RSAPrivateKey, 'padding': None },
@@ -45,14 +63,14 @@ class PKIFile(PKI):
     PRIVATE_KEY_BAK = 'private_key.bak'
     CERTIFICATE_BAK = 'certificate.bak'
 
-    def __init__(self, ipc_client):
+    def __init__(self, ipc_client: GreengrassCoreIPCClientV2):
         super().__init__(ipc_client, KEY_ALGORITHMS, SIGNING_ALGORITHMS)
         print('Using PKIFile')
         self._private_key_backup = f'{os.getcwd()}/{PKIFile.PRIVATE_KEY_BAK}'
         self._certificate_backup = f'{os.getcwd()}/{PKIFile.CERTIFICATE_BAK}'
-        self._new_private_key_pem = None
+        self._new_private_key_pem = ''
 
-    def create_csr(self):
+    def create_csr(self) -> typing.Optional[str]:
         """ Creates a certificate signing request from the private key """
         try:
             with open(self._effective_config.certificate_file_path(), 'rb') as certificate_file:
@@ -60,11 +78,14 @@ class PKIFile(PKI):
 
             print(f'Generating new private key using algorithm {self._config.key_algorithm}')
 
+            # Generate a new private key. The private key family must match the signing algorithm.
+            new_private_key: typing.Union[rsa.RSAPrivateKey, ec.EllipticCurvePrivateKey]
             if KEY_ALGORITHMS[self._config.key_algorithm]['type'] == rsa.RSAPrivateKey:
-                size = KEY_ALGORITHMS[self._config.key_algorithm]['size']
+                size = KEY_ALGORITHMS[self._config.key_algorithm]['size'] # type: ignore
                 new_private_key = rsa.generate_private_key(public_exponent=65537, key_size=size)
             else:
-                new_private_key = ec.generate_private_key(KEY_ALGORITHMS[self._config.key_algorithm]['curve'])
+                curve = KEY_ALGORITHMS[self._config.key_algorithm]['curve'] # type: ignore
+                new_private_key = ec.generate_private_key(curve)
 
             print(f'Signing the CSR using algorithm {self._config.signing_algorithm}')
 
@@ -104,7 +125,7 @@ class PKIFile(PKI):
 
         return new_csr_pem
 
-    def rotate(self, new_cert_pem):
+    def rotate(self, new_cert_pem: str) -> bool:
         """ Rotates from the old to new certificate and private key """
         try:
             certificate_file_path = self._effective_config.certificate_file_path()
@@ -127,7 +148,7 @@ class PKIFile(PKI):
 
         return success
 
-    def rollback(self):
+    def rollback(self) -> bool:
         """ Rolls back to the old certificate and private key """
         try:
             certificate_file_path = self._effective_config.certificate_file_path()
@@ -146,13 +167,13 @@ class PKIFile(PKI):
 
         return success
 
-    def backup_exists(self):
+    def backup_exists(self) -> bool:
         """ Indicates whether the backup certificate and private key exists """
         # We expect neither or both to exist. However, if we lost power, rebooted or restarted
         # at an inopportune moment, it may be that only one exists.
         return os.path.exists(self._certificate_backup) and os.path.exists(self._private_key_backup)
 
-    def delete_backup(self):
+    def delete_backup(self) -> None:
         """ Deletes the backup certificate and private key """
         os.remove(self._certificate_backup)
         os.remove(self._private_key_backup)

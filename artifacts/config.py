@@ -7,6 +7,7 @@ Component configuration management
 
 import sys
 import traceback
+from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
 from awsiot.greengrasscoreipc.model import (
     ValidateConfigurationUpdateEvents,
     ConfigurationValidityReport,
@@ -15,7 +16,7 @@ from awsiot.greengrasscoreipc.model import (
 
 class Config():
     """ Component configuration management """
-    def __init__(self, ipc_client, key_algorithms, signing_algorithms):
+    def __init__(self, ipc_client: GreengrassCoreIPCClientV2, key_algorithms: dict, signing_algorithms: dict):
         self._ipc_client = ipc_client
         self._key_algorithms = key_algorithms
         self._signing_algorithms = signing_algorithms
@@ -32,12 +33,12 @@ class Config():
         print(f'Configured signing algorithm is {self._signing_algorithm}')
 
     @property
-    def key_algorithm(self):
+    def key_algorithm(self) -> str:
         """ Getter for the key algorithm """
         return self._key_algorithm
 
     @property
-    def signing_algorithm(self):
+    def signing_algorithm(self) -> str:
         """ Getter for the signing algorithm """
         return self._signing_algorithm
 

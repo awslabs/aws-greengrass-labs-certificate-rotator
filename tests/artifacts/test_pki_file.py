@@ -123,7 +123,7 @@ def test_rotate(mocker, pkifile):
     shutil_copy2.assert_has_calls(calls, any_order=False)
     calls = [call(f'{CERT_FILE_PATH}', 'w', encoding='utf-8'), call(f'{PRIV_KEY_PATH}', 'w', encoding='utf-8')]
     file.assert_has_calls(calls, any_order=True)
-    calls = [call(CERTIFICATE_PEM), call(None)]
+    calls = [call(CERTIFICATE_PEM), call('')]
     file().write.assert_has_calls(calls, any_order=True)
 
 def test_rotate_exception(mocker, pkifile):

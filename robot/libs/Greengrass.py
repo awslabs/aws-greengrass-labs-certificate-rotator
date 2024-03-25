@@ -175,7 +175,7 @@ class Greengrass():
                     things.remove(thing)
 
             # Pause so we can't hit API limits
-            time.sleep(1)
+            time.sleep(0.1)
 
     def remove_windows_devices_from_thing_group(self):
         """ Removes any Windows core devices from the thing group """

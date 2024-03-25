@@ -10,7 +10,7 @@ from topic_base import TOPIC_BASE_CERT
 
 class StateCreatingCertificate(State):
     """ Certificate rotator state: Creating Certificate """
-    def on_rx_message(self, topic, message):
+    def on_rx_message(self, topic: str, message: dict) -> None:
         if topic == f'{TOPIC_BASE_CERT}/create/accepted':
             print('Got new certificate. Backing up old certificate and private key, and switching to new.')
             rotated = self._context.pki.rotate(message['certificatePem'])
@@ -22,6 +22,6 @@ class StateCreatingCertificate(State):
             print('Create rejected.')
             self._context.fail_the_job()
 
-    def on_timeout(self):
+    def on_timeout(self) -> None:
         print('Comms failure creating new certificate.')
         self._context.fail_the_job()

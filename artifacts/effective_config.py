@@ -23,10 +23,10 @@ class EffectiveConfig():
         with open(f'{gg_root_path}{file_path}', encoding='utf-8') as effective_config_file:
             self._yaml = yaml.safe_load(effective_config_file)
 
-    def certificate_file_path(self):
+    def certificate_file_path(self) -> str:
         """ Certificate file path configuration """
         return self._yaml['system']['certificateFilePath']
 
-    def private_key_path(self):
+    def private_key_path(self) -> str:
         """ Private key path configuration """
         return self._yaml['system']['privateKeyPath']

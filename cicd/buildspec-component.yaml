@@ -13,6 +13,7 @@ phases:
       # Log the versions of all tools
       - python3 --version
       - pylint --version
+      - mypy --version
       - pytest --version
       - bandit --version
       - gdk --version
@@ -22,6 +23,9 @@ phases:
     commands:
       # Perform static analysis on our Python source before we use it for anything else
       - pylint artifacts libs tests *.py
+
+      # Run static type checking on the component artifacts
+      - mypy --ignore-missing-imports artifacts
 
       # Run our unit tests 
       - pytest --junit-xml=junit.xml --cov=. --cov-branch
