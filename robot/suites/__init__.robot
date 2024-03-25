@@ -6,7 +6,7 @@ Documentation    AWS Labs Greengrass Certificate Rotator test suite
 Suite Setup      Setup
 Suite Teardown   Teardown
 
-*** Keyword ***
+*** Keywords ***
 Setup
     Pass Execution  No suite-wide setup actions required
 
