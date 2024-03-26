@@ -365,7 +365,7 @@ export class CicdStack extends cdk.Stack {
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: ['greengrass:GetCoreDevice'],
+          actions: ['greengrass:GetCoreDevice', 'greengrass:ListInstalledComponents'],
           resources: [`arn:aws:greengrass:${this.region}:${this.account}:coreDevices:*`]
         }),
         new iam.PolicyStatement({

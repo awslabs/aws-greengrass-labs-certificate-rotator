@@ -9,7 +9,8 @@ Suite Setup     Setup
 Test Template   Rotation Should Succeed
 
 *** Variables ***
-${removed_things}
+${windows_things}
+${pkcs_things}
 
 *** Test Cases ***                                          KEY         SIGNING
 AWS IoT CA with RSA-2048 key and SHA256WITHRSA CSR          RSA-2048    SHA256WITHRSA
@@ -42,9 +43,15 @@ Setup
 Rotation Should Succeed
     [Arguments]     ${key_algorithm}    ${signing_algorithm}
 
-    # The IoT Device SDK doesn't support EC keys under Windows: https://github.com/awslabs/aws-c-io/issues/260
+    # The IoT Device SDK doesn't support PKCS#8 keys under Windows, and Greengrass
+    # can only use EC keys in PKCS#8 format: https://github.com/awslabs/aws-c-io/issues/260
     IF  '${key_algorithm}' == 'ECDSA-P256' or '${key_algorithm}' == 'ECDSA-P384' or '${key_algorithm}' == 'ECDSA-P521'
-        ${removed_things} =     Greengrass.Remove Windows Devices From Thing Group
+        ${windows_things} =     Greengrass.Remove Windows Devices From Thing Group
+    END
+
+    # The IoT Device SDK doesn't support ECDSA-P521 with HSMs/PKCS#11: https://github.com/awslabs/aws-c-io/issues/591
+    IF  '${key_algorithm}' == 'ECDSA-P521'
+        ${pkcs_things} =    Greengrass.Remove PKCS Devices From Thing Group
     END
 
     ${result} =     Greengrass.Merge Configuration  ${key_algorithm}    ${signing_algorithm}
@@ -58,10 +65,13 @@ Rotation Should Succeed
     ${result} =     Greengrass.Check Certificates   ${True}     ${key_algorithm}    SHA256WITHRSA
     Should Be True  ${result}
 
-    [Teardown]  Restore Windows Devices     ${key_algorithm}    ${signing_algorithm}    ${removed_things}
+    [Teardown]  Restore Devices     ${key_algorithm}    ${signing_algorithm}    ${windows_things}   ${pkcs_things}
 
-Restore Windows Devices
-    [Arguments]     ${key_algorithm}    ${signing_algorithm}    ${removed_things}
+Restore Devices
+    [Arguments]     ${key_algorithm}    ${signing_algorithm}    ${windows_things}   ${pkcs_things}
     IF  '${key_algorithm}' == 'ECDSA-P256' or '${key_algorithm}' == 'ECDSA-P384' or '${key_algorithm}' == 'ECDSA-P521'
-        Greengrass.Add Windows Devices To Thing Group   ${removed_things}
+        Greengrass.Add Devices To Thing Group   ${windows_things}
+    END
+    IF  '${key_algorithm}' == 'ECDSA-P521'
+        Greengrass.Add Devices To Thing Group   ${pkcs_things}
     END
