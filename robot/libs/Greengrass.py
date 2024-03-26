@@ -195,8 +195,25 @@ class Greengrass():
 
         return removed_things
 
-    def add_windows_devices_to_thing_group(self, removed_things):
-        """ Restores Windows core devices to the thing group """
+    def remove_pkcs_devices_from_thing_group(self):
+        """ Removes any core devices using PKCS/HSM/TPM from the thing group """
+        core_devices = self._greengrassv2_client.list_core_devices(thingGroupArn=self._target_arn)['coreDevices']
+        removed_things = []
+
+        for device in core_devices:
+            thing_name = device['coreDeviceThingName']
+            response = self._greengrassv2_client.list_installed_components(coreDeviceThingName=thing_name)
+            for component in response['installedComponents']:
+                if component['componentName'] == 'aws.greengrass.crypto.Pkcs11Provider':
+                    self._logger.info('Removing core device %s from Thing group', thing_name)
+                    self._iot_client.remove_thing_from_thing_group(thingGroupName=self._thing_group_name,
+                                                                    thingName=thing_name)
+                    removed_things.append(thing_name)
+
+        return removed_things
+
+    def add_devices_to_thing_group(self, removed_things):
+        """ Restores core devices to the thing group """
         for thing in removed_things:
             self._logger.info('Adding core device %s to Thing group', thing)
             self._iot_client.add_thing_to_thing_group(thingGroupName=self._thing_group_name,
