@@ -6,7 +6,7 @@ Deploys a component version to a Thing group. This should be
 called after "gdk component build" and "gdk component publish".
 
 Example execution:
-python3 deploy_component_version.py 1.0.0 GreengrassEC2DeviceFarm
+python3 deploy_component_version.py 1.1.0 GreengrassEC2DeviceFarm
 """
 
 import argparse
@@ -132,7 +132,7 @@ def wait_for_deployment_to_finish(deploy_id):
 gdk_config = GdkConfig()
 
 parser = argparse.ArgumentParser(description=f'Deploy a version of the {gdk_config.name()} component')
-parser.add_argument('version', help='Version of the component to be deployed (Example: 1.0.0)')
+parser.add_argument('version', help='Version of the component to be deployed (Example: 1.1.0)')
 parser.add_argument('thingGroupName', help='Name of the Thing group of Greengrass core device(s) to deploy to')
 args = parser.parse_args()
 
