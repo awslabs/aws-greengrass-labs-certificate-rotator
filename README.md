@@ -283,10 +283,10 @@ gdk component publish
 The component can be deployed using [the console or using the AWS CLI](https://docs.aws.amazon.com/greengrass/v2/developerguide/create-deployments.html) in the normal way. Alternatively it can be deployed using the supplied **deploy_component_version.py** script. Example execution of the convenience script:
 
 ```
-python3 deploy_component_version.py 1.0.0 MyCoreDevicesThingGroup
+python3 deploy_component_version.py 1.1.0 MyCoreDevicesThingGroup
 ```
 
-This deploys the new component version to a Greengrass core device thing group named **MyCoreDevicesThingGroup**.
+This deploys the component version to a Greengrass core device thing group named **MyCoreDevicesThingGroup**.
 
 ## Notifications
 
