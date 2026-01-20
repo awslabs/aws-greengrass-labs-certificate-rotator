@@ -3,7 +3,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import * as cdk from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib/core';
 import { CertificateRotatorStack } from '../lib/certificate-rotator-stack';
 import { AwsSolutionsChecks } from 'cdk-nag'
 import { Aspects } from 'aws-cdk-lib';

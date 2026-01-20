@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import * as cdk from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib/core';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as CertificateRotator from '../lib/certificate-rotator-stack';
 
@@ -96,5 +96,5 @@ test('Missing context variables', () => {
   const app = new cdk.App();
   expect(() => {
     new CertificateRotator.CertificateRotatorStack(app, STACK_NAME);
-  }).toThrowError();
+  }).toThrow();
 });
