@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import * as cdk from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib/core';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as Cicd from '../lib/cicd-stack';
 
@@ -59,5 +59,5 @@ test('Missing Context Variables', () => {
   const app = new cdk.App();
   expect(() => {
     new Cicd.CicdStack(app, STACK_NAME);
-  }).toThrowError();
+  }).toThrow();
 });
