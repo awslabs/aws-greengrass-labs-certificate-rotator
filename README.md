@@ -38,7 +38,6 @@ Consequently this repository delivers a full end-to-end device certificate and p
   * [Notifications](#notifications)
   * [Certificate Rotation Jobs](#certificate-rotation-jobs)
     * [Console](#console)
-    * [Fleet Hub](#fleet-hub)
     * [CLI](#cli)
 * [Configuration](#configuration)
   * [Component Configuration](#configuration)
@@ -127,8 +126,8 @@ This component and cloud backend take inspiration from the [device certificate r
     - Use [Job rollout, scheduling and abort configurations](https://docs.aws.amazon.com/iot/latest/developerguide/jobs-configurations-details.html#job-rollout-abort) to perform canary rotations, to perform rotations during maintenance windows and to guard against throttling. 
     - Use [Job timeout configuration and job retry configurations](https://docs.aws.amazon.com/iot/latest/developerguide/jobs-configurations-details.html#job-timeout-retry) to rotate in a more resilient, robust and timely manner.
     - Target specific sub-collections of devices using [Thing types](https://docs.aws.amazon.com/iot/latest/developerguide/thing-types.html), thing attributes, [static thing groups](https://docs.aws.amazon.com/iot/latest/developerguide/thing-groups.html), [dynamic thing groups](https://docs.aws.amazon.com/iot/latest/developerguide/dynamic-thing-groups.html) and [fleet indexing](https://docs.aws.amazon.com/iot/latest/developerguide/iot-indexing.html).
-    - Conveniently trigger rotations on demand from the AWS IoT Console or from [Fleet Hub for AWS IoT Device Management](https://docs.aws.amazon.com/iot/latest/fleethubuserguide/what-is-aws-iot-monitor.html).
-    - Use AWS IoT Console or [Fleet Hub for AWS IoT Device Management](https://docs.aws.amazon.com/iot/latest/fleethubuserguide/what-is-aws-iot-monitor.html) for better visibility into rotation status and progress across the fleet.
+    - Conveniently trigger rotations on demand from the AWS IoT Console.
+    - Use the AWS IoT Console for better visibility into rotation status and progress across the fleet.
     - Use the job to bookend the rotation process so that the [job execution terminal status](https://docs.aws.amazon.com/iot/latest/developerguide/iot-jobs-lifecycle.html#iot-job-execution-states) indicates success or failure of the rotation operation.
 3. Do not mandate [AWS IoT Device Defender](https://docs.aws.amazon.com/iot/latest/developerguide/device-defender.html) [device certificate expiring check](https://docs.aws.amazon.com/iot/latest/developerguide/audit-chk-device-cert-approaching-expiration.html) as the only rotation trigger. You should be free to choose an appropriate trigger to suit your own business needs. 
 4. In addition to AWS IoT certificates, support [AWS Private Certificate Authority (CA)](https://docs.aws.amazon.com/privateca/latest/userguide/PcaWelcome.html) as a Certificate Authority (CA) and to issue device certificates. This gives you the option to use your own CA and therefore control device certificate expiry dates. The AWS IoT Device Defender device certificate expiring check only makes sense as a trigger if you can control the expiry date.
@@ -305,13 +304,6 @@ Job templates can be used to create certificate rotation jobs in several ways.
 The AWS IoT Console offers a flexible interface for creating jobs from the job template. It allows the user to conveniently modify the job configuration.
 
 ![job-template-console](images/job-template-console.png)
-
-### Fleet Hub
-
-[Fleet Hub](https://docs.aws.amazon.com/iot/latest/fleethubuserguide/what-is-aws-iot-monitor.html) offers a simple mechanism for creating jobs from job templates. However it does not presently allow the user to modify the job configuration. 
-
-![job-template-fleet-hub](images/job-template-fleet-hub.png)
-
 
 ### CLI
 
