@@ -14,10 +14,12 @@ from pki import PKI
 from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
 
 # Greengrass HSM/PKCS is only supported on Linux. And the python-pkcs11
-# module requires Python 3.7 or above. So we don't import these
+# module requires Python 3.9 or above. So we don't import these
 # packages unless we are in a system that can actually use them.
+# Pylint complains about this conditional section.
+# pylint: disable=possibly-used-before-assignment
 if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
-    (sys.version_info.major == 3 and sys.version_info.minor >= 7)):
+    (sys.version_info.major == 3 and sys.version_info.minor >= 9)):
     import pkcs11
     from pkcs11 import Attribute, ObjectClass, Mechanism, KeyType, MechanismFlag, MGF
     from pkcs11.util.x509 import decode_x509_certificate
