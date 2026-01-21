@@ -30,17 +30,19 @@ def valid_job_execution(iot_jobs_data, event):
             job_execution['statusDetails']['certificateRotationProgress'] == 'started'
 
 
-def valid_thing_principals(thing_principals):
+def valid_thing_principals(thing_principal_objects):
     """ Validates the thing principals """
     # The Thing should have just one principal and it should be a certificate
-    return len(thing_principals) == 1 and 'cert' in thing_principals[0]
+    return len(thing_principal_objects) == 1 and 'cert' in thing_principal_objects[0]['principal']
 
 
-def valid_client(event, thing_principals):
+def valid_client(event, thing_principal_objects):
     """ Validates the MQTT client """
     # The MQTT client should have authenticated using the certificate attached to the Thing.
-    # And we demand that the client ID match the Thing name.
-    return thing_principals[0].endswith(event['principal']) and event['clientId'] == event['thingName']
+    # And we demand that the client ID match the Thing name (being mindful that Greengrass
+    # can append a suffix to the client ID.)
+    return thing_principal_objects[0]['principal'].endswith(event['principal']) and\
+        event['clientId'].startswith(event['thingName'])
 
 
 def create_iot_certificate(iot, csr):
@@ -111,7 +113,7 @@ def create_pca_certificate(iot, csr, ca_arn):
     return (cert_response, error_msg)
 
 
-def create_certificate(iot, iot_jobs_data, event, thing_principals):
+def create_certificate(iot, iot_jobs_data, event, thing_principal_objects):
     """ Create and register a new device certificate """
     pca_ca_arn = os.environ.get('PCA_CA_ARN')
 
@@ -126,7 +128,7 @@ def create_certificate(iot, iot_jobs_data, event, thing_principals):
     if error_msg is None:
 
         # Get the policies that are attached to the existing certificate
-        policies = iot.list_principal_policies(principal=thing_principals[0])['policies']
+        policies = iot.list_principal_policies(principal=thing_principal_objects[0]['principal'])['policies']
         print(policies)
 
         # Policies attached to the existing certificate should be attached to the new one
@@ -134,9 +136,10 @@ def create_certificate(iot, iot_jobs_data, event, thing_principals):
             iot.attach_policy(policyName=policy['policyName'],
                                 target=cert_response['certificateArn'])
 
-        # Attach the new device certificate to the Thing
+        # Attach the new device certificate to the Thing with exclusive association
         iot.attach_thing_principal(thingName=event['thingName'],
-                                    principal=cert_response['certificateArn'])
+                                    principal=cert_response['certificateArn'],
+                                    thingPrincipalType='EXCLUSIVE_THING')
 
         # We'll remember the certificate IDs in the job execution status details
         status_details = {
@@ -174,15 +177,17 @@ def handler(event, context):
     endpoint = iot.describe_endpoint(endpointType='iot:Jobs')['endpointAddress']
     iot_jobs_data = boto3.client('iot-jobs-data', endpoint_url=f'https://{endpoint}')
 
-    thing_principals = iot.list_thing_principals(thingName=event['thingName'])['principals']
-    print(thing_principals)
+    # Get only those thing principals that are associated exclusively (our certificates should be)
+    thing_principal_objects = iot.list_thing_principals_v2(thingName=event['thingName'],
+                                                 thingPrincipalType='EXCLUSIVE_THING')['thingPrincipalObjects']
+    print(thing_principal_objects)
 
     # If all the pre-conditions are met, we can proceed
     if valid_job_execution(iot_jobs_data, event) and\
-        valid_thing_principals(thing_principals) and\
-        valid_client(event, thing_principals):
+        valid_thing_principals(thing_principal_objects) and\
+        valid_client(event, thing_principal_objects):
 
-        certificate, error_msg = create_certificate(iot, iot_jobs_data, event, thing_principals)
+        certificate, error_msg = create_certificate(iot, iot_jobs_data, event, thing_principal_objects)
     else:
         certificate = None
         error_msg = 'Pre-conditions not met'

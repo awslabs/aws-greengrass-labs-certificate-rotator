@@ -51,18 +51,20 @@ def delete_certificate(certificate, event):
 
     certificate_id = event['statusDetails'][certificate_key]
 
-    thing_principals = iot.list_thing_principals(thingName=thing_name)['principals']
-    print(thing_principals)
+    # Get only those thing principals that are associated exclusively (our certificates should be)
+    thing_principal_objects = iot.list_thing_principals_v2(thingName=thing_name,
+                                                 thingPrincipalType='EXCLUSIVE_THING')['thingPrincipalObjects']
+    print(thing_principal_objects)
 
     # The Thing should have two principals and they should both be certificates
-    valid_thing_principals = len(thing_principals) == 2 and\
-                                'cert' in thing_principals[0] and\
-                                'cert' in thing_principals[1]
+    valid_thing_principals = len(thing_principal_objects) == 2 and\
+                                'cert' in thing_principal_objects[0]['principal'] and\
+                                'cert' in thing_principal_objects[1]['principal']
 
     # We should have thing principals. The certificate should be one of the Thing principals.
     if valid_thing_principals and\
-        (thing_principals[0].endswith(certificate_id) or\
-        thing_principals[1].endswith(certificate_id)):
+        (thing_principal_objects[0]['principal'].endswith(certificate_id) or\
+        thing_principal_objects[1]['principal'].endswith(certificate_id)):
 
         # Get the certificcate and extract its details
         certificate = iot.describe_certificate(certificateId=certificate_id)

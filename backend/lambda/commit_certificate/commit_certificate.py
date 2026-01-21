@@ -30,21 +30,23 @@ def valid_job_execution(job_execution):
             'newCertificateId' in job_execution['statusDetails']
 
 
-def valid_thing_principals(thing_principals):
+def valid_thing_principals(thing_principal_objects):
     """ Validates the thing principals """
     # The Thing should have two principals and they should both be certificates
-    return len(thing_principals) == 2 and\
-            'cert' in thing_principals[0] and 'cert' in thing_principals[1]
+    return len(thing_principal_objects) == 2 and\
+            'cert' in thing_principal_objects[0]['principal'] and\
+            'cert' in thing_principal_objects[1]['principal']
 
 
-def valid_client(event, job_execution, thing_principals):
+def valid_client(event, job_execution, thing_principal_objects):
     """ Validates the MQTT client """
     # The MQTT client should have authenticated using the new certificate and this should
     # be one of the Thing principals. And we demand that the client ID match the Thing name.
+    # (Being mindful that Greengrass can append a suffix to the client ID.)
     return event['principal'] == job_execution['statusDetails']['newCertificateId'] and\
-            (thing_principals[0].endswith(event['principal']) or\
-            thing_principals[1].endswith(event['principal'])) and\
-            event['clientId'] == event['thingName']
+            (thing_principal_objects[0]['principal'].endswith(event['principal']) or\
+            thing_principal_objects[1]['principal'].endswith(event['principal'])) and\
+            event['clientId'].startswith(event['thingName'])
 
 
 def handler(event, context):
@@ -66,13 +68,15 @@ def handler(event, context):
         print(f'No valid job execution for this Thing: {error}')
         job_execution = None
 
-    thing_principals = iot.list_thing_principals(thingName=event['thingName'])['principals']
-    print(thing_principals)
+    # Get only those thing principals that are associated exclusively (our certificates should be)
+    thing_principal_objects = iot.list_thing_principals_v2(thingName=event['thingName'],
+                                                 thingPrincipalType='EXCLUSIVE_THING')['thingPrincipalObjects']
+    print(thing_principal_objects)
 
     # If all the pre-conditions are met, we can proceed
     if valid_job_execution(job_execution) and\
-        valid_thing_principals(thing_principals) and\
-        valid_client(event, job_execution, thing_principals):
+        valid_thing_principals(thing_principal_objects) and\
+        valid_client(event, job_execution, thing_principal_objects):
 
         # Mark in the status details that we committed to the new certificate
         status_details = job_execution['statusDetails']

@@ -210,7 +210,7 @@ export class CertificateRotatorStack extends cdk.Stack {
           actions: [
             'iot:DescribeEndpoint', 'iot:CreateCertificateFromCsr',
             'iot:RegisterCertificateWithoutCA', 'iot:ListPrincipalPolicies',
-            'iot:ListThingPrincipals', 'iot:AttachThingPrincipal'
+            'iot:ListThingPrincipalsV2', 'iot:AttachThingPrincipal'
           ],
           resources: ['*']
         }),
@@ -264,7 +264,7 @@ export class CertificateRotatorStack extends cdk.Stack {
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
-            'iot:DescribeEndpoint', 'iot:ListThingPrincipals'
+            'iot:DescribeEndpoint', 'iot:ListThingPrincipalsV2'
           ],
           resources: ['*']
         }),
@@ -304,7 +304,7 @@ export class CertificateRotatorStack extends cdk.Stack {
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
-            'iot:ListPrincipalPolicies', 'iot:ListThingPrincipals',
+            'iot:ListPrincipalPolicies', 'iot:ListThingPrincipalsV2',
             'iot:DetachThingPrincipal'
           ],
           resources: ['*']
