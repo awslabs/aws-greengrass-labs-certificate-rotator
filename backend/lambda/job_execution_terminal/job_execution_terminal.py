@@ -44,6 +44,13 @@ def delete_certificate(certificate, event):
     has_cert_details = 'statusDetails' in event and\
                             certificate_key in event['statusDetails']
 
+    # We can't proceed if the certificate details are absent
+    if not has_cert_details:
+        print('Did not delete certificate because certificate details missing from job status')
+        return
+
+    certificate_id = event['statusDetails'][certificate_key]
+
     thing_principals = iot.list_thing_principals(thingName=thing_name)['principals']
     print(thing_principals)
 
@@ -52,18 +59,15 @@ def delete_certificate(certificate, event):
                                 'cert' in thing_principals[0] and\
                                 'cert' in thing_principals[1]
 
-    # If we have certificate details in the job execution we can safely retrieve them
-    if has_cert_details:
-        certificate_id = event['statusDetails'][certificate_key]
+    # We should have thing principals. The certificate should be one of the Thing principals.
+    if valid_thing_principals and\
+        (thing_principals[0].endswith(certificate_id) or\
+        thing_principals[1].endswith(certificate_id)):
+
+        # Get the certificcate and extract its details
         certificate = iot.describe_certificate(certificateId=certificate_id)
         certificate_status = certificate['certificateDescription']['status']
         certificate_arn = certificate['certificateDescription']['certificateArn']
-
-    # We should have the expected job execution and thing principals. The certificate
-    # should be one of the Thing principals.
-    if has_cert_details and valid_thing_principals and\
-        (thing_principals[0].endswith(certificate_id) or\
-        thing_principals[1].endswith(certificate_id)):
 
         # Deactivate the certificate (it should be active)
         if certificate_status == 'ACTIVE':
