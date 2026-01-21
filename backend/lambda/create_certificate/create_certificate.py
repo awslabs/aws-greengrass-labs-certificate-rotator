@@ -184,6 +184,7 @@ def handler(event, context):
 
         certificate, error_msg = create_certificate(iot, iot_jobs_data, event, thing_principals)
     else:
+        certificate = None
         error_msg = 'Pre-conditions not met'
 
 
