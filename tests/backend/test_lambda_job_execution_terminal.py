@@ -23,9 +23,15 @@ POLICIES = {'policies': [{'policyName': 'morpheus'}, {'policyName': 'smith'}]}
 def fixture_principals():
     """ Fake thing principals """
     return {
-        'principals': [
-            f'arn:aws:iot:us-east-1:000011112222:cert/{NEW_CERT_ID}',
-            f'arn:aws:iot:us-east-1:000011112222:cert/{OLD_CERT_ID}'
+        'thingPrincipalObjects': [
+            {
+                'principal': f'arn:aws:iot:us-east-1:000011112222:cert/{NEW_CERT_ID}',
+                'thingPrincipalType': 'EXCLUSIVE_THING'
+            },
+            {
+                'principal': f'arn:aws:iot:us-east-1:000011112222:cert/{OLD_CERT_ID}',
+                'thingPrincipalType': 'EXCLUSIVE_THING'
+            }
         ]
     }
 
@@ -48,7 +54,7 @@ def fixture_event(mocker, boto3_client, principals):
     mocker.patch('job_execution_terminal.os.environ.get', side_effect=mock_os_environ_get)
 
     # This setup section only does anything useful when status is SUCCEEDED
-    boto3_client.list_thing_principals.return_value = principals
+    boto3_client.list_thing_principals_v2.return_value = principals
     cert_desc = {'certificateDescription': {'status': 'ACTIVE', 'certificateArn': OLD_CERT_ARN}}
     boto3_client.describe_certificate.return_value = cert_desc
     boto3_client.list_principal_policies.return_value = POLICIES
@@ -68,7 +74,8 @@ def mock_os_environ_get(name):
 
 def confirm_certificate_deleted(boto3_client, cert_id, cert_arn, cert_status):
     """ Checks that all certificate deletion actions occur """
-    boto3_client.list_thing_principals.assert_called_once_with(thingName=THING_NAME)
+    boto3_client.list_thing_principals_v2.assert_called_once_with(thingName=THING_NAME,
+                                                                   thingPrincipalType='EXCLUSIVE_THING')
     boto3_client.describe_certificate.assert_called_once_with(certificateId=cert_id)
 
     if cert_status == 'ACTIVE':
@@ -106,21 +113,24 @@ def test_job_succeeded_deletes_inactive_cert(boto3_client, event):
 
 def test_job_succeeded_thing_principals_too_few(boto3_client, event, principals):
     """ Handle succeeded job but the thing has fewer principals than expected """
-    del principals['principals'][0]
+    del principals['thingPrincipalObjects'][0]
     handler(event, None)
     confirm_certificate_not_deleted(boto3_client)
     boto3_client.publish.assert_not_called()
 
 def test_job_succeeded_thing_principals_too_many(boto3_client, event, principals):
     """ Handle succeeded job but the thing has more principals than expected """
-    principals['principals'].append('arn:aws:iot:us-east-1:000011112222:cert/bonus')
+    principals['thingPrincipalObjects'].append({
+        'principal': 'arn:aws:iot:us-east-1:000011112222:cert/bonus',
+        'thingPrincipalType': 'EXCLUSIVE_THING'
+    })
     handler(event, None)
     confirm_certificate_not_deleted(boto3_client)
     boto3_client.publish.assert_not_called()
 
 def test_job_succeeded_thing_principal_not_cert(boto3_client, event, principals):
     """ Handle succeeded job but the thing has principals other than a certificate """
-    principals['principals'][0]='wrong type of principal'
+    principals['thingPrincipalObjects'][0]['principal']='wrong type of principal'
     handler(event, None)
     confirm_certificate_not_deleted(boto3_client)
     boto3_client.publish.assert_not_called()

@@ -41,8 +41,11 @@ def fixture_job_execution():
 def fixture_principals():
     """ Fake thing principals """
     return {
-        'principals': [
-            f'arn:aws:iot:us-east-1:000011112222:cert/{OLD_CERT_ID}'
+        'thingPrincipalObjects': [
+            {
+                'principal': f'arn:aws:iot:us-east-1:000011112222:cert/{OLD_CERT_ID}',
+                'thingPrincipalType': 'EXCLUSIVE_THING'
+            }
         ]
     }
 
@@ -59,14 +62,15 @@ def fixture_event(mocker, boto3_client, job_execution, principals):
     }
 
     boto3_client.describe_job_execution.return_value = job_execution
-    boto3_client.list_thing_principals.return_value = principals
+    boto3_client.list_thing_principals_v2.return_value = principals
     mocker.patch('create_certificate.os.environ.get', side_effect=mock_os_environ_get)
 
     yield event
 
     calls = [call(endpointType='iot:Jobs'), call(endpointType='iot:Data-ATS')]
     boto3_client.describe_endpoint.assert_has_calls(calls, any_order=True)
-    boto3_client.list_thing_principals.assert_called_once_with(thingName=THING_NAME)
+    boto3_client.list_thing_principals_v2.assert_called_once_with(thingName=THING_NAME,
+                                                                   thingPrincipalType='EXCLUSIVE_THING')
     boto3_client.describe_job_execution.assert_called_once_with(jobId=JOB_ID, thingName=THING_NAME,
                                                                 includeJobDocument=True)
 
@@ -91,12 +95,13 @@ def mock_os_environ_get_pca(name):
 
 def confirm_succeeded(boto3_client, event, principals):
     """ Checks that the create succeeded """
-    boto3_client.list_principal_policies.assert_called_once_with(principal=principals['principals'][0])
+    boto3_client.list_principal_policies.assert_called_once_with(principal=principals['thingPrincipalObjects'][0]['principal'])
     calls = [call(policyName=POLICIES['policies'][0]['policyName'], target=NEW_CERT_ARN),
              call(policyName=POLICIES['policies'][1]['policyName'], target=NEW_CERT_ARN)]
     boto3_client.attach_policy.assert_has_calls(calls)
     boto3_client.attach_thing_principal.assert_called_once_with(thingName=event['thingName'],
-                                                                principal=NEW_CERT_ARN)
+                                                                principal=NEW_CERT_ARN,
+                                                                thingPrincipalType='EXCLUSIVE_THING')
     boto3_client.update_job_execution.assert_called_once_with(jobId=JOB_ID, thingName=THING_NAME,
                                                               status='IN_PROGRESS',
                                                               statusDetails={
@@ -196,19 +201,22 @@ def test_create_failed_job_execution_has_status_details(boto3_client, event, job
 
 def test_create_failed_thing_principals_too_few(boto3_client, event, principals):
     """ Create fails if the thing has fewer principals than expected """
-    del principals['principals'][0]
+    del principals['thingPrincipalObjects'][0]
     handler(event, None)
     confirm_failed(boto3_client)
 
 def test_create_failed_thing_principals_too_many(boto3_client, event, principals):
     """ Create fails if the thing has more principals than expected """
-    principals['principals'].append('arn:aws:iot:us-east-1:000011112222:cert/bonus')
+    principals['thingPrincipalObjects'].append({
+        'principal': 'arn:aws:iot:us-east-1:000011112222:cert/bonus',
+        'thingPrincipalType': 'EXCLUSIVE_THING'
+    })
     handler(event, None)
     confirm_failed(boto3_client)
 
 def test_create_failed_thing_principal_not_cert(boto3_client, event, principals):
     """ Create fails if the thing has principals other than a certificate """
-    principals['principals'][0]='wrong type of principal'
+    principals['thingPrincipalObjects'][0]['principal']='wrong type of principal'
     handler(event, None)
     confirm_failed(boto3_client)
 

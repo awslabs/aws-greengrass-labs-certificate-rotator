@@ -37,9 +37,15 @@ def fixture_job_execution():
 def fixture_principals():
     """ Fake thing principals """
     return {
-        'principals': [
-            f'arn:aws:iot:us-east-1:000011112222:cert/{NEW_CERT_ID}',
-            f'arn:aws:iot:us-east-1:000011112222:cert/{OLD_CERT_ID}'
+        'thingPrincipalObjects': [
+            {
+                'principal': f'arn:aws:iot:us-east-1:000011112222:cert/{NEW_CERT_ID}',
+                'thingPrincipalType': 'EXCLUSIVE_THING'
+            },
+            {
+                'principal': f'arn:aws:iot:us-east-1:000011112222:cert/{OLD_CERT_ID}',
+                'thingPrincipalType': 'EXCLUSIVE_THING'
+            }
         ]
     }
 
@@ -55,7 +61,7 @@ def fixture_event(mocker, boto3_client, job_execution, principals):
     }
 
     boto3_client.describe_job_execution.return_value = job_execution
-    boto3_client.list_thing_principals.return_value = principals
+    boto3_client.list_thing_principals_v2.return_value = principals
     mocker.patch('commit_certificate.os.environ.get', return_value=JOB_DOCUMENT)
 
     yield event
@@ -64,7 +70,8 @@ def fixture_event(mocker, boto3_client, job_execution, principals):
     boto3_client.describe_endpoint.assert_has_calls(calls, any_order=True)
     boto3_client.describe_job_execution.assert_called_once_with(jobId=JOB_ID, thingName=THING_NAME,
                                                                 includeJobDocument=True)
-    boto3_client.list_thing_principals.assert_called_once_with(thingName=THING_NAME)
+    boto3_client.list_thing_principals_v2.assert_called_once_with(thingName=THING_NAME,
+                                                                   thingPrincipalType='EXCLUSIVE_THING')
 
 def confirm_succeeded(boto3_client):
     """ Checks that the commit succeeded """
@@ -137,19 +144,22 @@ def test_commit_failed_job_execution_status_details_no_new(boto3_client, event, 
 
 def test_commit_failed_thing_principals_too_few(boto3_client, event, principals):
     """ Commit fails if the thing has fewer principals than expected """
-    del principals['principals'][0]
+    del principals['thingPrincipalObjects'][0]
     handler(event, None)
     confirm_failed(boto3_client)
 
 def test_commit_failed_thing_principals_too_many(boto3_client, event, principals):
     """ Commit fails if the thing has more principals than expected """
-    principals['principals'].append('arn:aws:iot:us-east-1:000011112222:cert/bonus')
+    principals['thingPrincipalObjects'].append({
+        'principal': 'arn:aws:iot:us-east-1:000011112222:cert/bonus',
+        'thingPrincipalType': 'EXCLUSIVE_THING'
+    })
     handler(event, None)
     confirm_failed(boto3_client)
 
 def test_commit_failed_thing_principal_not_cert(boto3_client, event, principals):
     """ Commit fails if the thing has principals other than a certificate """
-    principals['principals'][0]='wrong type of principal'
+    principals['thingPrincipalObjects'][0]['principal']='wrong type of principal'
     handler(event, None)
     confirm_failed(boto3_client)
 

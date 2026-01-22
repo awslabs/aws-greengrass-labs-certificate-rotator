@@ -24,6 +24,7 @@ Consequently this repository delivers a full end-to-end device certificate and p
   * [Greengrass Cloud Services](#greengrass-cloud-services)
     * [Core Device Role](#core-device-role)
     * [IoT Policy](#iot-policy)
+    * [Exclusive Thing Association](#exclusive-thing-association)
   * [Developer Machine](#developer-machine)
     * [AWS CLI](#aws-cli)
     * [AWS CDK](#aws-cdk)
@@ -133,7 +134,7 @@ This component and cloud backend take inspiration from the [device certificate r
 4. In addition to AWS IoT certificates, support [AWS Private Certificate Authority (CA)](https://docs.aws.amazon.com/privateca/latest/userguide/PcaWelcome.html) as a Certificate Authority (CA) and to issue device certificates. This gives you the option to use your own CA and therefore control device certificate expiry dates. The AWS IoT Device Defender device certificate expiring check only makes sense as a trigger if you can control the expiry date.
 5. Have the cloud backend explicitly check what principal was used to authenticate the connection when the core device first connects with the new certificate. This is to guard against the device erroneously using its old certificate and mistakenly thinking it used the new one (a potentially very serious error).
 6. Have the cloud backend demand that the MQTT client ID match the Thing name, as per [best practice](https://docs.aws.amazon.com/wellarchitected/latest/iot-lens/identity-and-access-management-iam.html). This guards against mismatch between things as job targets and MQTT client names.
-7. Likewise demand that each device has just one device certificate attached to it (in the AWS IoT Core registry) and each device has a unique device certificate.
+7. Likewise demand that each device has just one device certificate attached to it (in the AWS IoT Core registry) and for that certificate be [associated exclusively](https://docs.aws.amazon.com/iot/latest/developerguide/exclusive-thing.html) such that each device has a unique device certificate.
 8. Maintain strict chain of custody, ensuring that certificate create and commit requests originate from a Thing that is part of an in-progress rotation job. This guards against new certificates being issued to bad actors.
 9. Be resilient to unexpected loss of connection or loss of messages at inconvenient times.
 10. Be resilient to power loss, service restart or device reboot during rotation.
@@ -203,6 +204,10 @@ Policy template to add to your device role (substituting correct values for ACCO
 ### IoT Policy
 
 The AWS IoT Policy for the Greengrass core device must grant the ability to publish, subscribe and receive from the AWS IoT [job topics](https://docs.aws.amazon.com/iot/latest/developerguide/reserved-topics.html#reserved-topics-job) and the rotation custom topics. The full list of topics used by the Certificate Rotator component is available in [recipe.yaml](recipe.yaml).
+
+### Exclusive Thing Association
+
+Each of your Greengrass core devices should have just one certificate attached to it, and that certificate must be attached with [exclusive thing association](https://docs.aws.amazon.com/iot/latest/developerguide/exclusive-thing.html). The certificate rotator attaches all new certificates with exclusive thing association, and will only allow rotation to occur if the existing certificate uses exclusive association.
 
 ## Developer Machine
 
