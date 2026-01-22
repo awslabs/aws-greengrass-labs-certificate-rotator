@@ -18,27 +18,7 @@ function checkBasicResources(template: Template) {
   template.hasResourceProperties('AWS::SNS::Topic', { TopicName: `${STACK_NAME}Notification` });
 }
 
-test('Good Stack with CodeCommit repo', () => {
-    const app = new cdk.App({
-      context: {
-        ConnectionId: '',
-        OwnerName: '',
-        RepositoryName: 'delta',
-        BranchName: 'gamma',
-        ThingGroupName: 'epsilon',
-        PcaCaId: 'zeta',
-      }
-    });
-
-    const stack = new Cicd.CicdStack(app, STACK_NAME);
-    const template = Template.fromStack(stack)
-    template.resourceCountIs('AWS::Events::Rule', 2);
-    template.hasResourceProperties('AWS::Events::Rule', {
-      EventPattern: { source: [ 'aws.codecommit' ] }
-    });
-});
-
-test('Good Stack with CodeStar connection', () => {
+test('Good Stack', () => {
   const app = new cdk.App({
     context: {
       ConnectionId: 'alpha',

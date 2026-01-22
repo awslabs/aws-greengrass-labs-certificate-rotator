@@ -3,7 +3,6 @@
 
 import * as cdk from 'aws-cdk-lib/core';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-import * as codecommit from 'aws-cdk-lib/aws-codecommit';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -101,26 +100,14 @@ export class CicdStack extends cdk.Stack {
 
     var sourceAction;
 
-    if (context.connectionId !== '') {
-        sourceAction = new codepipeline_actions.CodeStarConnectionsSourceAction({
-            actionName: 'Source',
-            output: sourceArtifact,
-            connectionArn: `arn:aws:codestar-connections:${this.region}:${this.account}:connection/${context.connectionId}`,
-            owner: context.ownerName,
-            repo: context.repositoryName,
-            branch: context.branchName
-          });
-    } else {
-        // If no CodeStar connection ID is defined, we assume CodeCommit is being used.
-        const codeCommitRepository = codecommit.Repository.fromRepositoryName(this, `${this.stackName}Repository`,
-                                                                              context.repositoryName);
-        sourceAction = new codepipeline_actions.CodeCommitSourceAction({
-            actionName: 'Source',
-            output: sourceArtifact,
-            repository: codeCommitRepository,
-            branch: context.branchName
-        });    
-    }
+    sourceAction = new codepipeline_actions.CodeStarConnectionsSourceAction({
+      actionName: 'Source',
+      output: sourceArtifact,
+      connectionArn: `arn:aws:codestar-connections:${this.region}:${this.account}:connection/${context.connectionId}`,
+      owner: context.ownerName,
+      repo: context.repositoryName,
+      branch: context.branchName
+    });
 
     const backendBuildAction = new codepipeline_actions.CodeBuildAction({
       actionName: 'BuildAndDeployBackend',
@@ -440,8 +427,8 @@ export class CicdStack extends cdk.Stack {
   }
 
   private getContext(): CicdStackContext {
-    const connectionId    = this.getContextVariable('ConnectionId',   'CodeStar connection ID of the repo, if hosted in GitHub, BitBucket and GitHub Enterprise Server (Default: Empty string denoting CodeCommit as the host)');
-    const ownerName       = this.getContextVariable('OwnerName',      'Name of the owner of the repo, if hosted in GitHub, BitBucket and GitHub Enterprise Server (Default: Empty string because CodeCommit is the default host)');
+    const connectionId    = this.getContextVariable('ConnectionId',   'AWS CodeConnection ID of the repo hosted in GitHub, BitBucket, GitLab or Azure DevOps (Mandatory');
+    const ownerName       = this.getContextVariable('OwnerName',      'Name of the owner of the repo hosted in GitHub, BitBucket, GitLab or Azure DevOps (Mandatory)');
     const repositoryName  = this.getContextVariable('RepositoryName', 'Name of the repository containing the source code (Default: aws-greengrass-labs-certificate-rotator)');
     const branchName      = this.getContextVariable('BranchName',     'Name of the branch to use in the repository (Default: main)');
     const thingGroupName  = this.getContextVariable('ThingGroupName', 'Name of the Thing group of Greengrass core device(s) to which the component should be deployed and tested (Mandatory)');
