@@ -40,10 +40,17 @@ class StateGettingJob(State):
                     # just restarted after rolling back a failed rotation.
                     print('ROLLBACK: In progress certificate rotation job, but no backup exists')
                     self._context.fail_the_job()
+        elif topic.startswith(TOPIC_BASE_JOBS) and topic.endswith('get/rejected') and\
+            self._context.pki.backup_exists():
+            # We got rejected (perhaps throttled) and we have a backup. This means
+            # we have just restarted with a new certificate but we can't verify it's
+            # working. So we need to rollback and restart.
+            print('Got get/rejected after restart. Rollback and restart.')
+            self._context.pki.rollback()
+            self._context.stop()
         else:
-            # Ignore (reset to idle) if 'get/rejected' or or 'get/accepted'
-            # but no job, or job type is not a certificate rotation, (or we
-            # got some other unexpected topic)
+            # Ignore (reset to idle) if we receive 'get/accepted' but no job, or the job type
+            # is not a certificate rotation, (or we got some other unexpected topic)
             self._context.change_state_idle()
 
     def on_timeout(self) -> None:
