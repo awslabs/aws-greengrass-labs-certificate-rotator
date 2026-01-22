@@ -62,9 +62,18 @@ def test_fail_job_if_no_backup(state_machine, state_getting_job):
     state_machine.fail_the_job.assert_called_once()
 
 def test_rejection_transitions_to_idle(state_machine, state_getting_job):
-    """ Confirm that we return to Idle if the get is rejected """
+    """ Confirm that we return to Idle if the get is rejected and no backup """
+    state_machine.pki.backup_exists.return_value = False
     state_getting_job.on_rx_message(f'{TOPIC_BASE_JOBS}/foobar/get/rejected', json.dumps({}))
     state_machine.change_state_idle.assert_called_once()
+
+def test_rejection_triggers_rollback_with_backup(state_machine, state_getting_job):
+    """ Confirm that we rollback if the get is rejected and there's a backup """
+    state_machine.pki.backup_exists.return_value = True
+    state_getting_job.on_rx_message(f'{TOPIC_BASE_JOBS}/foobar/get/rejected', json.dumps({}))
+    state_machine.pki.backup_exists.assert_called_once()
+    state_machine.pki.rollback.assert_called_once()
+    state_machine.stop.assert_called_once()
 
 def test_non_job_topic_is_ignored(state_machine, state_getting_job):
     """ Confirm that non-jobs topics are ignored """
