@@ -24,11 +24,12 @@ def test_rotate_if_create_accepted(state_machine, state_creating_certificate):
     state_machine.stop.assert_called_once()
 
 def test_restarts_occurs_even_if_rotate_fails(state_machine, state_creating_certificate):
-    """ Confirm that we still restart even if the rotate fails """
+    """ Confirm that we fail the job and restart if the rotate fails """
     message = { 'certificatePem': 'foobar' }
     state_machine.pki.rotate.return_value = False
     state_creating_certificate.on_rx_message(f'{TOPIC_BASE_CERT}/create/accepted', message)
     state_machine.pki.rotate.assert_called_once_with(message['certificatePem'])
+    state_machine.fail_the_job.assert_called_once_with()
     state_machine.stop.assert_called_once()
 
 def test_rollback_if_commit_rejected(state_machine, state_creating_certificate):
