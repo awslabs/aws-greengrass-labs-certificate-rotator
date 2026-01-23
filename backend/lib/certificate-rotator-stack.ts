@@ -49,7 +49,7 @@ export class CertificateRotatorStack extends cdk.Stack {
     this.createRule('CommitCertificate', commitCertificateLambda, 
                     `SELECT *, topic(3) AS thingName, topic() as topic, clientid() AS clientId, principal() AS principal FROM 'awslabs/things/+/certificate/commit'`)
     this.createRule('JobExecutionTerminal', jobExecutionTerminalLambda, 
-                    `SELECT * FROM '$aws/events/jobExecution/#' WHERE isUndefined(statusDetails.certificateRotationProgress) = false`)
+                    `SELECT * FROM '$aws/events/jobExecution/#' WHERE isUndefined(statusDetails.CertificateRotator) = false`)
 
     this.createJobExecutionEventsCustomResource()
   }
@@ -117,7 +117,8 @@ export class CertificateRotatorStack extends cdk.Stack {
       'JOB_DOCUMENT': JOB_DOCUMENT,
       'PCA_CA_ARN': pcaCaArn,
       'PCA_VALIDITY_IN_DAYS': context.pcaValidityInDays,
-      'PCA_SIGNING_ALGORITHM': context.pcaSigningAlgorithm
+      'PCA_SIGNING_ALGORITHM': context.pcaSigningAlgorithm,
+      'SHADOW_NAME': this.stackName
     };
   
     return env;
@@ -125,14 +126,16 @@ export class CertificateRotatorStack extends cdk.Stack {
 
   private createCommitCertEnv() {
     return {
-      'JOB_DOCUMENT': JOB_DOCUMENT
+      'JOB_DOCUMENT': JOB_DOCUMENT,
+      'SHADOW_NAME': this.stackName
     }
   }
 
   private createJobTerminalEnv(topic: sns.Topic) {
     return {
       'JOB_DOCUMENT': JOB_DOCUMENT,
-      'SNS_TOPIC_ARN': topic.topicArn
+      'SNS_TOPIC_ARN': topic.topicArn,
+      'SHADOW_NAME': this.stackName
     }
   }
 
@@ -224,7 +227,7 @@ export class CertificateRotatorStack extends cdk.Stack {
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
-            'iotjobsdata:DescribeJobExecution', 'iotjobsdata:UpdateJobExecution'
+            'iotjobsdata:DescribeJobExecution', 'iot:UpdateThingShadow'
           ],
           resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
         }),
@@ -271,7 +274,7 @@ export class CertificateRotatorStack extends cdk.Stack {
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
-            'iotjobsdata:DescribeJobExecution', 'iotjobsdata:UpdateJobExecution'
+            'iotjobsdata:DescribeJobExecution', 'iot:GetThingShadow', 'iot:UpdateThingShadow'
           ],
           resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
         }),
@@ -304,8 +307,8 @@ export class CertificateRotatorStack extends cdk.Stack {
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
-            'iot:ListPrincipalPolicies', 'iot:ListThingPrincipalsV2',
-            'iot:DetachThingPrincipal'
+            'iot:DescribeEndpoint', 'iot:ListPrincipalPolicies',
+            'iot:ListThingPrincipalsV2', 'iot:DetachThingPrincipal'
           ],
           resources: ['*']
         }),
@@ -316,6 +319,13 @@ export class CertificateRotatorStack extends cdk.Stack {
             'iot:DetachPolicy', 'iot:UpdateCertificate'
           ],
           resources: [`arn:aws:iot:${this.region}:${this.account}:cert/*`]
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'iot:GetThingShadow', 'iot:DeleteThingShadow'
+          ],
+          resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,

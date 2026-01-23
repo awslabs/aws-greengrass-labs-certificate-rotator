@@ -31,8 +31,7 @@ class StateUpdatingJob(State):
                     self._context.publish(f'{TOPIC_BASE_CERT}/create',json.dumps(response))
                 else:
                     # Fail the job if the CSR is not created
-                    print('Error creating the CSR.')
-                    self._context.fail_the_job()
+                    self._context.fail_the_job('Error creating the CSR.')
 
     def on_timeout(self) -> None:
         self._context.change_state_idle()

@@ -15,6 +15,7 @@ NEW_CERT_ID = 'choice is an illusion'
 OLD_CERT_ID = 'how deep the rabbit hole goes'
 THING_NAME = 'Nebuchadnezzar'
 JOB_DOCUMENT = '{"operation":"ROTATE_CERTIFICATE"}'
+SHADOW_NAME = "he's beginning to believe"
 TOPIC = f'awslabs/things/{THING_NAME}/certificate/commit'
 NEW_CERT_PEM = '-----BEGIN CERTIFICATE-----\nNot a real certificate\n-----END CERTIFICATE-----\n'
 NEW_CERT_ARN = f'arn:aws:iot:us-east-1:000011112222:cert/{NEW_CERT_ID}'
@@ -31,7 +32,7 @@ def fixture_job_execution():
             'jobId': JOB_ID,
             'status': 'IN_PROGRESS',
             'statusDetails': {
-                'certificateRotationProgress': 'started'
+                'Operation': 'ROTATE_CERTIFICATE'
             },
             'jobDocument': JOB_DOCUMENT
         }
@@ -77,7 +78,8 @@ def fixture_event(mocker, boto3_client, job_execution, principals):
 def mock_os_environ_get(name):
     """ Mock environment for the case of AWS IoT CA """
     environment = {
-        'JOB_DOCUMENT': JOB_DOCUMENT
+        'JOB_DOCUMENT': JOB_DOCUMENT,
+        'SHADOW_NAME': SHADOW_NAME
     }
 
     return environment.get(name, None)
@@ -88,33 +90,59 @@ def mock_os_environ_get_pca(name):
         'JOB_DOCUMENT': JOB_DOCUMENT,
         'PCA_CA_ARN': PCA_CA_ARN,
         'PCA_SIGNING_ALGORITHM': PCA_SIGNING_ALGORITHM,
-        'PCA_VALIDITY_IN_DAYS': f'{PCA_VALIDITY_IN_DAYS}'
+        'PCA_VALIDITY_IN_DAYS': f'{PCA_VALIDITY_IN_DAYS}',
+        'SHADOW_NAME': SHADOW_NAME
     }
 
     return environment.get(name, None)
 
 def confirm_succeeded(boto3_client, event, principals):
     """ Checks that the create succeeded """
-    boto3_client.list_principal_policies.assert_called_once_with(principal=principals['thingPrincipalObjects'][0]['principal'])
+    first_principal = principals['thingPrincipalObjects'][0]['principal']
+    boto3_client.list_principal_policies.assert_called_once_with(principal=first_principal)
     calls = [call(policyName=POLICIES['policies'][0]['policyName'], target=NEW_CERT_ARN),
              call(policyName=POLICIES['policies'][1]['policyName'], target=NEW_CERT_ARN)]
     boto3_client.attach_policy.assert_has_calls(calls)
     boto3_client.attach_thing_principal.assert_called_once_with(thingName=event['thingName'],
                                                                 principal=NEW_CERT_ARN,
                                                                 thingPrincipalType='EXCLUSIVE_THING')
-    boto3_client.update_job_execution.assert_called_once_with(jobId=JOB_ID, thingName=THING_NAME,
-                                                              status='IN_PROGRESS',
-                                                              statusDetails={
-                                                                    'newCertificateId': NEW_CERT_ID,
-                                                                    'oldCertificateId': OLD_CERT_ID,
-                                                                    'certificateRotationProgress': 'created'
-                                                                })
+    boto3_client.update_thing_shadow.assert_called_once_with(
+        thingName=event['thingName'],
+        shadowName=SHADOW_NAME,
+        payload=json.dumps({
+            'state': {
+                'reported': {
+                    'progress': 'created',
+                    'oldCertificateId': event['principal'],
+                    'newCertificateId': NEW_CERT_ID
+                }
+            }
+        })
+    )
     boto3_client.publish.assert_called_once_with(topic=f'{TOPIC}/accepted', qos=0,
                                                  payload=json.dumps({ 'certificatePem': NEW_CERT_PEM }))
 
 def confirm_failed(boto3_client):
     """ Checks that the commit failed """
     boto3_client.publish.assert_called_once_with(topic=f'{TOPIC}/rejected', qos=0, payload=ANY)
+
+def test_initialize_boto3_clients_idempotent(boto3_client, event):
+    """ Confirm that boto3 clients are initialized once and reused """
+    NEW_CERT = {
+        'certificateArn': NEW_CERT_ARN,
+        'certificateId': NEW_CERT_ID,
+        'certificatePem': NEW_CERT_PEM
+    }
+    boto3_client.create_certificate_from_csr.return_value = NEW_CERT
+    boto3_client.list_principal_policies.return_value = POLICIES
+
+    handler(event, None)
+    assert boto3_client.call_count == 3
+
+    boto3_client.describe_job_execution.reset_mock()
+    boto3_client.list_thing_principals_v2.reset_mock()
+    handler(event, None)
+    assert boto3_client.call_count == 3
 
 def test_create_succeeded_iot(boto3_client, event, principals):
     """ Create, with AWS IoT CA, succeeds if all necessary conditions are in place """
@@ -190,12 +218,6 @@ def test_create_failed_job_execution_wrong_status(boto3_client, event, job_execu
 def test_create_failed_job_execution_wrong_document(boto3_client, event, job_execution):
     """ Create fails if the job execution has the wrong job document """
     job_execution['execution']['jobDocument'] = 'something else'
-    handler(event, None)
-    confirm_failed(boto3_client)
-
-def test_create_failed_job_execution_has_status_details(boto3_client, event, job_execution):
-    """ Commit fails if the job execution has status details already """
-    job_execution['execution']['statusDetails'] = 'anything'
     handler(event, None)
     confirm_failed(boto3_client)
 

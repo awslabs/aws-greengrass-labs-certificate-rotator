@@ -20,13 +20,10 @@ class StateCreatingCertificate(State):
                 # The PKI rotation should not fail. If it does, it's an indication that the
                 # PKI module is perhaps not in a sane state, so we can't safely rollback
                 # here. Fail the job and let the restart handle rollback with freshly booted software.
-                print('Error rotating the certificate and private key.')
-                self._context.fail_the_job()
+                self._context.fail_the_job('Error rotating the certificate and private key.')
             self._context.stop()
         elif topic == f'{TOPIC_BASE_CERT}/create/rejected':
-            print('Create rejected.')
-            self._context.fail_the_job()
+            self._context.fail_the_job('Create was rejected.')
 
     def on_timeout(self) -> None:
-        print('Comms failure creating new certificate.')
-        self._context.fail_the_job()
+        self._context.fail_the_job('Comms failure when creating new certificate.')

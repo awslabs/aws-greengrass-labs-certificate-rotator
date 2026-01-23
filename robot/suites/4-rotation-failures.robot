@@ -20,7 +20,7 @@ Failure if create times out
 Rollback if re-connection fails
     ${old_certs} =  Greengrass.Get Certificates
     ${job_id} =     Greengrass.Create Rotation Job
-    Greengrass.Deactivate New Certificates  ${job_id}
+    Greengrass.Deactivate New Certificates
     ${counts} =     Greengrass.Wait For Job To Finish   ${job_id}
     # All job executions should fail (no successes and no timeouts)
     Should Be True  ${counts}[0] == 0 and ${counts}[1] > 0 and ${counts}[2] == 0

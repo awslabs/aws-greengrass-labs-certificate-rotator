@@ -161,9 +161,29 @@ def test_fail_the_job(mocker, state_machine):
     timer_cancel = mocker.patch('state_machine.Timer.cancel', return_value=None)
     idle_init = mocker.patch('state_machine.StateIdle.__init__', return_value=None)
     state_machine.job_id = 'whatever'
+
+    # Test default failure reason
     state_machine.fail_the_job()
-    publish.assert_called_once_with(f'{TOPIC_BASE_JOBS}/{state_machine.job_id}/update',
-                                    json.dumps({ 'status': 'FAILED' }))
-    timer_cancel.assert_called_once()
+    publish.assert_called_with(f'{TOPIC_BASE_JOBS}/{state_machine.job_id}/update',
+                               json.dumps({ 'status': 'FAILED',
+                                            'statusDetails': {
+                                                'CertificateRotator': True,
+                                                'DeviceFailureReason': 'Unknown error'
+                                            }}))
+
+    # Test custom failure reason
+    custom_reason = 'Custom failure reason'
+    state_machine.fail_the_job(custom_reason)
+    publish.assert_called_with(f'{TOPIC_BASE_JOBS}/{state_machine.job_id}/update',
+                               json.dumps({ 'status': 'FAILED',
+                                            'statusDetails': {
+                                                'CertificateRotator': True,
+                                                'DeviceFailureReason': custom_reason
+                                            } }))
+
+    assert publish.call_count == 2
+    # timer_cancel only called once - second call to change_state_idle reuses state and timer is already None
+    assert timer_cancel.call_count == 1
     timer_start.assert_not_called()
-    idle_init.assert_called_once()
+    # StateIdle is only created once and reused
+    assert idle_init.call_count == 1
