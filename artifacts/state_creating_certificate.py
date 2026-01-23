@@ -14,9 +14,14 @@ class StateCreatingCertificate(State):
         if topic == f'{TOPIC_BASE_CERT}/create/accepted':
             print('Got new certificate. Backing up old certificate and private key, and switching to new.')
             rotated = self._context.pki.rotate(message['certificatePem'])
-            if not rotated:
+            if rotated:
+                print('Restarting to activate new certificate and private key.')
+            else:
+                # The PKI rotation should not fail. If it does, it's an indication that the
+                # PKI module is perhaps not in a sane state, so we can't safely rollback
+                # here. Fail the job and let the restart handle rollback with freshly booted software.
                 print('Error rotating the certificate and private key.')
-            print('Restarting to activate new certificate and private key.')
+                self._context.fail_the_job()
             self._context.stop()
         elif topic == f'{TOPIC_BASE_CERT}/create/rejected':
             print('Create rejected.')
