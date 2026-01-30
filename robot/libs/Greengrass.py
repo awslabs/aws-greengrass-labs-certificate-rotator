@@ -10,6 +10,7 @@ import sys
 import os
 import time
 import uuid
+import json
 import boto3
 from cryptography.x509 import load_pem_x509_certificate
 from cryptography.x509.oid import SignatureAlgorithmOID
@@ -20,6 +21,7 @@ sys.path.append(f'{os.path.dirname(os.path.abspath(__file__))}/../..')
 from libs.gdk_config import GdkConfig
 
 JOB_TEMPLATE_NAME = 'AWSLabsCertificateRotator'
+SHADOW_NAME = 'AWSLabsCertificateRotator'
 
 KEY_ALGORITHMS = {
     'RSA-2048': { 'size': 2048, 'type': rsa.RSAPublicKey },
@@ -51,6 +53,9 @@ class Greengrass():
         endpoint = self._iot_client.describe_endpoint(endpointType='iot:Jobs')['endpointAddress']
         self._iot_jobs_data_client = boto3.client('iot-jobs-data', endpoint_url=f'https://{endpoint}',
                                                     region_name=self._gdk_config.region())
+        endpoint = self._iot_client.describe_endpoint(endpointType='iot:Data-ATS')['endpointAddress']
+        self._iot_data_client = boto3.client('iot-data', endpoint_url=f'https://{endpoint}',
+                                              region_name=self._gdk_config.region())
 
     def merge_configuration(self, key_algorithm, signing_algorithm):
         """ Merges new configuration for the certificate rotator component """
@@ -153,7 +158,7 @@ class Greengrass():
 
         return valid
 
-    def deactivate_new_certificates(self, job_id):
+    def deactivate_new_certificates(self):
         """ Deactivates new certificates as they're created so reconnection will fail, triggering a rollback """
         things = self._iot_client.list_things_in_thing_group(thingGroupName=self._thing_group_name)['things']
 
@@ -162,18 +167,22 @@ class Greengrass():
 
             for thing in things:
                 try:
-                    response = self._iot_jobs_data_client.describe_job_execution(jobId=job_id, thingName=thing)
-                except self._iot_jobs_data_client.exceptions.ResourceNotFoundException:
-                    self._logger.info('Job execution not found yet for: %s', thing)
+                    shadow_response = self._iot_data_client.get_thing_shadow(
+                        thingName=thing,
+                        shadowName=SHADOW_NAME
+                    )
+                except self._iot_data_client.exceptions.ResourceNotFoundException:
+                    self._logger.info('Shadow not available yet for: %s', thing)
                     continue
 
-                execution = response['execution']
-                if execution['status'] == 'IN_PROGRESS' and 'statusDetails' in execution and\
-                    'certificateRotationProgress' in execution['statusDetails'] and\
-                    execution['statusDetails']['certificateRotationProgress'] == 'created':
+                shadow = json.loads(shadow_response['payload'].read())
+
+                # if the shadow exists, the progress should already be "created", but we confirm
+                if shadow['state']['reported']['progress'] == 'created':
+                    new_cert_id = shadow['state']['reported']['newCertificateId']
+
                     self._logger.info('Deactivating new certificate for: %s', thing)
-                    certificate_id = execution['statusDetails']['newCertificateId']
-                    self._iot_client.update_certificate(certificateId=certificate_id, newStatus='INACTIVE')
+                    self._iot_client.update_certificate(certificateId=new_cert_id, newStatus='INACTIVE')
                     things.remove(thing)
 
             # Pause so we can't hit API limits

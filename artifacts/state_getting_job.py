@@ -25,7 +25,7 @@ class StateGettingJob(State):
             if message['execution']['status'] == 'QUEUED':
                 # There is a new rotation job (created before we started up)
                 topic = f'{TOPIC_BASE_JOBS}/{message["execution"]["jobId"]}/update'
-                request = { 'status': 'IN_PROGRESS', 'statusDetails': { 'certificateRotationProgress': 'started' } }
+                request = { 'status': 'IN_PROGRESS', 'statusDetails': {'CertificateRotator': True} }
                 self._context.change_state(StateUpdatingJob)
                 self._context.publish(topic, json.dumps(request))
             elif message['execution']['status'] == 'IN_PROGRESS':
@@ -38,8 +38,7 @@ class StateGettingJob(State):
                 else:
                     # We have an in progress job but no backup. Therefore we
                     # just restarted after rolling back a failed rotation.
-                    print('ROLLBACK: In progress certificate rotation job, but no backup exists')
-                    self._context.fail_the_job()
+                    self._context.fail_the_job('Rollback completed after comms failure with new certificate.')
         elif topic.startswith(TOPIC_BASE_JOBS) and topic.endswith('get/rejected') and\
             self._context.pki.backup_exists():
             # We got rejected (perhaps throttled) and we have a backup. This means

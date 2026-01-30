@@ -20,13 +20,11 @@ class StateCommittingCertificate(State):
             self._context.publish(topic, json.dumps(request))
             self._context.change_state_idle()
         elif topic == f'{TOPIC_BASE_CERT}/commit/rejected':
-            print('New certificate rejected. Rollback and restart.')
-            self._context.fail_the_job()
+            self._context.fail_the_job('Commit was rejected. Rollback and restart.')
             self._context.pki.rollback()
             self._context.stop()
 
     def on_timeout(self) -> None:
-        print('Comms failure with new certificate. Rollback and restart.')
-        self._context.change_state_idle()
+        self._context.fail_the_job('Comms failure when committing new certificate. Rollback and restart.')
         self._context.pki.rollback()
         self._context.stop()

@@ -34,7 +34,7 @@ def test_rollback_if_commit_rejected(state_machine, state_committing_certificate
 def test_timeout_triggers_rollback(state_machine, state_committing_certificate):
     """ Confirm that we rollback if the commit times out """
     state_committing_certificate.on_timeout()
-    state_machine.change_state_idle.assert_called_once()
+    state_machine.fail_the_job.assert_called_once()
     state_machine.pki.rollback.assert_called_once()
     state_machine.stop.assert_called_once()
 

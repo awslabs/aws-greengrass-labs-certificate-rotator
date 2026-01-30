@@ -390,6 +390,11 @@ export class CicdStack extends cdk.Stack {
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
+          actions: ['iot:GetThingShadow'],
+          resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
           actions: ['iotjobsdata:DescribeJobExecution'],
           resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
         }),

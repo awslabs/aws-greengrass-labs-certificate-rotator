@@ -129,11 +129,18 @@ class StateMachine():
         if self._running:
             self._state.on_timeout()
 
-    def fail_the_job(self) -> None:
-        """ Marks the job as failed """
+    def fail_the_job(self, reason: str = 'Unknown error') -> None:
+        """ Marks the job as failed with a reason """
         print('Failing the certificate rotation job.')
+        print(f'REASON: {reason}')
         topic = f'{TOPIC_BASE_JOBS}/{self._job_id}/update'
-        request = { 'status': 'FAILED' }
+        request = {
+            'status': 'FAILED',
+            'statusDetails': {
+                'CertificateRotator': True,
+                'DeviceFailureReason': reason
+            }
+        }
         self.publish(topic, json.dumps(request))
         self.change_state_idle()
 

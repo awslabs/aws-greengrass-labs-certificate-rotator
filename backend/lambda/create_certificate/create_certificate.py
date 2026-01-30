@@ -11,7 +11,26 @@ import json
 import os
 import boto3
 
-def valid_job_execution(iot_jobs_data, event):
+# Global clients initialized lazily to avoid breaking unit tests
+iot = None
+iot_jobs_data = None
+iot_data = None
+
+def initialize_boto3_clients():
+    """Lazy initialization of clients"""
+    # pylint: disable=global-statement
+    global iot, iot_jobs_data, iot_data
+    if iot is None:
+        iot = boto3.client('iot')
+    if iot_jobs_data is None:
+        iot_jobs_endpoint = iot.describe_endpoint(endpointType='iot:Jobs')['endpointAddress']
+        iot_jobs_data = boto3.client('iot-jobs-data', endpoint_url=f'https://{iot_jobs_endpoint}')
+    if iot_data is None:
+        iot_data_endpoint = iot.describe_endpoint(endpointType='iot:Data-ATS')['endpointAddress']
+        iot_data = boto3.client('iot-data', endpoint_url=f'https://{iot_data_endpoint}')
+
+
+def valid_job_execution(event):
     """ Validates the job execution """
     try:
         job_execution = iot_jobs_data.describe_job_execution(jobId=event['jobId'],
@@ -22,12 +41,9 @@ def valid_job_execution(iot_jobs_data, event):
         print(f'No valid job execution for this Thing: {error}')
         job_execution = None
 
-    # The Thing should have an IN_PROGRESS job execution with no status details
+    # The Thing should have an IN_PROGRESS job execution
     return job_execution is not None and job_execution['status'] == 'IN_PROGRESS' and\
-            job_execution['jobDocument'] == os.environ.get('JOB_DOCUMENT') and\
-            'statusDetails' in job_execution and len(job_execution['statusDetails']) == 1 and\
-            'certificateRotationProgress' in job_execution['statusDetails'] and\
-            job_execution['statusDetails']['certificateRotationProgress'] == 'started'
+            job_execution['jobDocument'] == os.environ.get('JOB_DOCUMENT')
 
 
 def valid_thing_principals(thing_principal_objects):
@@ -45,7 +61,7 @@ def valid_client(event, thing_principal_objects):
         event['clientId'].startswith(event['thingName'])
 
 
-def create_iot_certificate(iot, csr):
+def create_iot_certificate(csr):
     """ Uses AWS IoT to create a device certificate """
     cert_response = None
     error_msg = None
@@ -64,7 +80,7 @@ def create_iot_certificate(iot, csr):
     return (cert_response, error_msg)
 
 
-def create_pca_certificate(iot, csr, ca_arn):
+def create_pca_certificate(csr, ca_arn):
     """ Uses AWS Private Certificate Authority to create a device certificate """
     cert_response = None
     error_msg = None
@@ -113,15 +129,15 @@ def create_pca_certificate(iot, csr, ca_arn):
     return (cert_response, error_msg)
 
 
-def create_certificate(iot, iot_jobs_data, event, thing_principal_objects):
+def create_certificate(event, thing_principal_objects):
     """ Create and register a new device certificate """
     pca_ca_arn = os.environ.get('PCA_CA_ARN')
 
     # We use Private CA for certificate creation if a Private CA ARN is defined
     if pca_ca_arn is None or pca_ca_arn == '':
-        cert_response, error_msg = create_iot_certificate(iot, event['csr'])
+        cert_response, error_msg = create_iot_certificate(event['csr'])
     else:
-        cert_response, error_msg = create_pca_certificate(iot, event['csr'], pca_ca_arn)
+        cert_response, error_msg = create_pca_certificate(event['csr'], pca_ca_arn)
 
     # Proceed if no errors. We have validated everything from the Thing, so we expect
     # no further errors.
@@ -141,18 +157,21 @@ def create_certificate(iot, iot_jobs_data, event, thing_principal_objects):
                                     principal=cert_response['certificateArn'],
                                     thingPrincipalType='EXCLUSIVE_THING')
 
-        # We'll remember the certificate IDs in the job execution status details
-        status_details = {
-            'certificateRotationProgress': 'created',
-            'oldCertificateId': event['principal'],
-            'newCertificateId': cert_response['certificateId']
-        }
-
-        # Update the job execution to remember the certificate IDs
-        iot_jobs_data.update_job_execution(jobId=event['jobId'],
-                                            thingName=event['thingName'],
-                                            status='IN_PROGRESS',
-                                            statusDetails=status_details)
+        # Store certificate IDs in named shadow
+        shadow_name = os.environ.get('SHADOW_NAME')
+        iot_data.update_thing_shadow(
+            thingName=event['thingName'],
+            shadowName=shadow_name,
+            payload=json.dumps({
+                'state': {
+                    'reported': {
+                        'progress': 'created',
+                        'oldCertificateId': event['principal'],
+                        'newCertificateId': cert_response['certificateId']
+                    }
+                }
+            })
+        )
 
         certificate = cert_response['certificatePem']
     else:
@@ -161,21 +180,12 @@ def create_certificate(iot, iot_jobs_data, event, thing_principal_objects):
     return (certificate, error_msg)
 
 
-def publish_reply(iot, topic, message):
-    """ Publishes a reply back to the device """
-    endpoint = iot.describe_endpoint(endpointType='iot:Data-ATS')['endpointAddress']
-    iot_data = boto3.client('iot-data', endpoint_url=f'https://{endpoint}')
-    iot_data.publish(topic=topic, qos=0, payload=message)
-
-
 def handler(event, context):
     """ Lambda handler """
     # pylint: disable=unused-argument
     print(f'request: {json.dumps(event)}')
 
-    iot = boto3.client('iot')
-    endpoint = iot.describe_endpoint(endpointType='iot:Jobs')['endpointAddress']
-    iot_jobs_data = boto3.client('iot-jobs-data', endpoint_url=f'https://{endpoint}')
+    initialize_boto3_clients()
 
     # Get only those thing principals that are associated exclusively (our certificates should be)
     thing_principal_objects = iot.list_thing_principals_v2(thingName=event['thingName'],
@@ -183,11 +193,11 @@ def handler(event, context):
     print(thing_principal_objects)
 
     # If all the pre-conditions are met, we can proceed
-    if valid_job_execution(iot_jobs_data, event) and\
+    if valid_job_execution(event) and\
         valid_thing_principals(thing_principal_objects) and\
         valid_client(event, thing_principal_objects):
 
-        certificate, error_msg = create_certificate(iot, iot_jobs_data, event, thing_principal_objects)
+        certificate, error_msg = create_certificate(event, thing_principal_objects)
     else:
         certificate = None
         error_msg = 'Pre-conditions not met'
@@ -201,6 +211,6 @@ def handler(event, context):
         topic = f'{event["topic"]}/accepted'
         reply = { 'certificatePem': certificate }
 
-    publish_reply(iot, topic, json.dumps(reply))
+    iot_data.publish(topic=topic, qos=0, payload=json.dumps(reply))
 
     return { 'status': 200, 'reply': reply }

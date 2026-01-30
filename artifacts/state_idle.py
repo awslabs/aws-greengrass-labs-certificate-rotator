@@ -19,7 +19,7 @@ class StateIdle(State):
             and message['execution']['jobDocument']['operation'] == 'ROTATE_CERTIFICATE':
 
             topic = f'{TOPIC_BASE_JOBS}/{message["execution"]["jobId"]}/update'
-            request = { 'status': 'IN_PROGRESS', 'statusDetails': { 'certificateRotationProgress': 'started' } }
+            request = { 'status': 'IN_PROGRESS', 'statusDetails': {'CertificateRotator': True} }
             self._context.change_state(StateUpdatingJob)
             self._context.publish(topic, json.dumps(request))
 

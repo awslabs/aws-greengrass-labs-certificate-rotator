@@ -11,6 +11,24 @@ import os
 from enum import Enum
 import boto3
 
+# Global clients initialized lazily to avoid breaking unit tests
+iot = None
+iot_data = None
+sns = None
+
+def initialize_boto3_clients():
+    """Lazy initialization of clients"""
+    # pylint: disable=global-statement
+    global iot, iot_data, sns
+    if iot is None:
+        iot = boto3.client('iot')
+    if iot_data is None:
+        iot_data_endpoint = iot.describe_endpoint(endpointType='iot:Data-ATS')['endpointAddress']
+        iot_data = boto3.client('iot-data', endpoint_url=f'https://{iot_data_endpoint}')
+    if sns is None:
+        sns = boto3.client('sns')
+
+
 class Certificate(Enum):
     """ Certificate types """
     OLD = 1
@@ -19,8 +37,6 @@ class Certificate(Enum):
 
 def send_notification(message):
     """ Sends a message as an SNS notification """
-    sns = boto3.client('sns')
-
     print(message)
 
     sns.publish(TopicArn=os.environ.get('SNS_TOPIC_ARN'),
@@ -28,28 +44,15 @@ def send_notification(message):
                 Subject='AWS Labs Certificate Rotator Notification')
 
 
-def delete_certificate(certificate, event):
+def delete_certificate(certificate, thing_name, shadow):
     """ Deletes either the new or old certificate """
-    iot = boto3.client('iot')
-
-    thing_name = event['thingArn'].split('thing/')[-1]
-
     certificate_age = 'new' if certificate == Certificate.NEW else 'old'
 
     print(f'Deleting {thing_name} {certificate_age} certificate')
 
     certificate_key = f'{certificate_age}CertificateId'
 
-    # The job execution status details should exist and contain the certificate ID.
-    has_cert_details = 'statusDetails' in event and\
-                            certificate_key in event['statusDetails']
-
-    # We can't proceed if the certificate details are absent
-    if not has_cert_details:
-        print('Did not delete certificate because certificate details missing from job status')
-        return
-
-    certificate_id = event['statusDetails'][certificate_key]
+    certificate_id = shadow[certificate_key]
 
     # Get only those thing principals that are associated exclusively (our certificates should be)
     thing_principal_objects = iot.list_thing_principals_v2(thingName=thing_name,
@@ -95,20 +98,8 @@ def delete_certificate(certificate, event):
         print('Did not delete certificate because of invalid thing state')
 
 
-def get_rotation_progress(event):
-    """ Gets the progress indicator from the status details of the job execution """
-    progress = None
-
-    if 'statusDetails' in event and 'certificateRotationProgress' in event['statusDetails']:
-        progress = event['statusDetails']['certificateRotationProgress']
-
-    return progress
-
-
 def valid_job(event):
     """ Validates that the event is from a certificate rotation job """
-    iot = boto3.client('iot')
-
     try:
         job_document = iot.get_job_document(jobId=event['jobId'])['document']
         print(job_document)
@@ -116,8 +107,17 @@ def valid_job(event):
         print(f'No valid job document for this job ID: {error}')
         job_document = None
 
-    # There should be a job execution and it should be a certificate rotation
+    # There should be a job and it should be a certificate rotation
     return job_document is not None and job_document == os.environ.get('JOB_DOCUMENT')
+
+
+def valid_shadow(shadow):
+    """Validates that the shadow has the expected fields"""
+    return shadow is not None and\
+            'newCertificateId' in shadow and\
+            'oldCertificateId' in shadow and\
+            'progress' in shadow and\
+            (shadow['progress'] == 'created' or shadow['progress'] == 'committed')
 
 
 def handler(event, context):
@@ -125,36 +125,54 @@ def handler(event, context):
     # pylint: disable=unused-argument
     print(f'request: {json.dumps(event)}')
 
+    initialize_boto3_clients()
+
+    thing_name = event['thingArn'].split('thing/')[-1]
+
+    try:
+        shadow_response = iot_data.get_thing_shadow(thingName=thing_name,
+                                            shadowName=os.environ.get('SHADOW_NAME'))
+        shadow = json.loads(shadow_response['payload'].read())['state']['reported']
+        print(f'shadow: {shadow}')
+        iot_data.delete_thing_shadow(thingName=thing_name, shadowName=os.environ.get('SHADOW_NAME'))
+    except Exception as error:
+        print(f'No valid shadow for this Thing: {error}')
+        shadow = None
+
+    msg_prefix = f'Certificate rotation job execution for {thing_name}'
+
     # Ensure we are processing a valid certificate rotation job
-    if valid_job(event):
-        msg_prefix = f'Certificate rotation job execution for {event["thingArn"].split("thing/")[-1]}'
-        rotation_progress = get_rotation_progress(event)
+    if not valid_job(event):
+        send_notification(f'{msg_prefix}: INVALID job. Certificates were not cleaned up.')
+    else:
+        rotation_progress = shadow['progress'] if valid_shadow(shadow) else None
 
         if event['status'] == 'SUCCEEDED':
-            # Is the success after the commit (as it should)?
+            # Is the success after the commit (as it should be)?
             if rotation_progress == 'committed':
                 # With the rotation successfully completed, we can delete the old certificate
-                delete_certificate(Certificate.OLD, event)
+                delete_certificate(Certificate.OLD, thing_name, shadow)
                 print(f'{msg_prefix} SUCCEEDED')
             else:
-                # This should not happen. Do not delete a certficiate. Just notify.
+                # This should not happen. Do not delete a certificate. Just notify.
                 send_notification(f'{msg_prefix} SUCCEEDED but rotation progress was '
                                     'contradicting. Check core device logs for details. '
-                                    'Old certificate is still active.')
+                                    'Old certificate was not deleted.')
 
         elif event['status'] == 'FAILED':
             # Is the failure after the create (and before the commit)?
             if rotation_progress == 'created':
                 # The device will have rolled back to the old certificate. Delete the new one.
-                delete_certificate(Certificate.NEW, event)
+                delete_certificate(Certificate.NEW, thing_name, shadow)
 
             send_notification(f'{msg_prefix} FAILED. Core device detected an error. '
-                                'Check core device logs for details. Old certificate is '
-                                'still active.')
+                                'Check job execution status details and core device logs.'
+                                'Old certificate is still active.')
 
         elif event['status'] == 'TIMED_OUT':
-            # Handle the unlikely event that we suffered a comms error after receiving the commit,
-            # but before the job execution was updated to SUCCEEDED. In this situaion, we can't
+            # If we timed out, it means the device went offline during the rotation. This could be
+            # because it low power or lost connectivity. If the device went offline after we received
+            # the commit (but before the job execution was updated to SUCCEEDED), we can't
             # know if the device received the certificate/commit/accepted message. Hence we don't
             # know if the device is using the new or old certificate. In this case we retain both
             # the old and new certificate and request operator attention.
@@ -172,11 +190,11 @@ def handler(event, context):
                 # Is the timeout after the create (and before the commit)?
                 if rotation_progress == 'created':
                     # The device will have rolled back to the old certificate. Delete the new one.
-                    delete_certificate(Certificate.NEW, event)
+                    delete_certificate(Certificate.NEW, thing_name, shadow)
 
-                send_notification(f'{msg_prefix} TIMED OUT. Likely due to intermittent '
-                                    'connectivity. Rotation cancelled. Old '
-                                    'certificate is still active.')
+                send_notification(f'{msg_prefix} TIMED OUT. The device went '
+                                    'offline during the rotation. Rotation cancelled. '
+                                    'Old certificate is still active.')
 
     result = {
         'status': 200
