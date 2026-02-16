@@ -1,2 +1,2 @@
 robotframework==7.4.1
-cryptography==46.0.2
+cryptography==46.0.5
