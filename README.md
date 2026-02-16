@@ -1,8 +1,8 @@
 # AWS Greengrass Labs Certificate Rotator
 
-Device certificate and private key rotation is a [security best practice defined in the IoT Lens for the AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/iot-lens-checklist/design-principle-6.html). At the time of writing however, AWS IoT does not offer a device certificate rotation service or feature. It's left to application builders to implement both the device software and the cloud backend to achieve device certificate rotation.
+Device certificate and private key rotation is a [security best practice defined in the IoT Lens for the AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/iot-lens/identity-and-access-management.html#iotsec05-bp01). At the time of writing however, AWS IoT does not offer a device certificate rotation service or feature. It's left to application builders to implement both the device software and the cloud backend to achieve device certificate rotation.
 
-To guide you in this implementation, AWS offers a [device certificate rotation blog](https://aws.amazon.com/blogs/iot/how-to-manage-iot-device-certificate-rotation-using-aws-iot/), an [IoT Jumpstart workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/001cd52d-8105-4da9-a0c2-ee391260e0c7/en-US/operations/lab30-devicecertrotation) and the [Connected Device Framework (CDF) Certificate Vendor module](https://github.com/aws/aws-connected-device-framework/tree/main/source/packages/services/certificatevendor). These are documented rotation procedures and/or partial implementations.
+To guide you in this implementation, AWS offers a [device certificate rotation blog](https://aws.amazon.com/blogs/iot/how-to-manage-iot-device-certificate-rotation-using-aws-iot/) and the [Connected Device Framework (CDF) Certificate Vendor module](https://github.com/aws/aws-connected-device-framework/tree/main/source/packages/services/certificatevendor). These are documented rotation procedures and/or partial implementations.
 
 In general, it's challenging to offer a full end-to-end device certificate and private key rotation reference implementation because the device software is heavily dependent on the device hardware. In particular, certificate and private key storage and APIs are strongly influenced by the hardware and the Hardware Abstraction layer (HAL). However, AWS IoT Greengrass presents an opportunity to build a reference implementation because it standardizes the certificate and private key storage via the [Greengrass Core software installation configuration](https://docs.aws.amazon.com/greengrass/v2/developerguide/manual-installation.html#run-greengrass-core-v2-installer-manual). The location of the certificate and private key are defined by the **certificateFilePath** and **privateKeyPath** configuration parameters. These may be defined as files on disk or as [PKCS#11 objects in a Hardware Security Module (HSM)](https://docs.aws.amazon.com/greengrass/v2/developerguide/hardware-security.html).
 
@@ -43,6 +43,8 @@ Consequently this repository delivers a full end-to-end device certificate and p
 * [Configuration](#configuration)
   * [Component Configuration](#configuration)
   * [Cloud Backend Configuration](#configuration)
+* [Costs](#costs)
+* [Limits](#limits)
 * [Troubleshooting](#troubleshooting)
   * [Troubleshooting Tools](#troubleshooting-tools)
     * [Core Device: Component Log File](#core-device-component-log-file)
@@ -133,7 +135,7 @@ This component and cloud backend take inspiration from the [device certificate r
 3. Do not mandate [AWS IoT Device Defender](https://docs.aws.amazon.com/iot/latest/developerguide/device-defender.html) [device certificate expiring check](https://docs.aws.amazon.com/iot/latest/developerguide/audit-chk-device-cert-approaching-expiration.html) as the only rotation trigger. You should be free to choose an appropriate trigger to suit your own business needs. 
 4. In addition to AWS IoT certificates, support [AWS Private Certificate Authority (CA)](https://docs.aws.amazon.com/privateca/latest/userguide/PcaWelcome.html) as a Certificate Authority (CA) and to issue device certificates. This gives you the option to use your own CA and therefore control device certificate expiry dates. The AWS IoT Device Defender device certificate expiring check only makes sense as a trigger if you can control the expiry date.
 5. Have the cloud backend explicitly check what principal was used to authenticate the connection when the core device first connects with the new certificate. This is to guard against the device erroneously using its old certificate and mistakenly thinking it used the new one (a potentially very serious error).
-6. Have the cloud backend demand that the MQTT client ID match the Thing name, as per [best practice](https://docs.aws.amazon.com/wellarchitected/latest/iot-lens/identity-and-access-management-iam.html). This guards against mismatch between things as job targets and MQTT client names.
+6. Have the cloud backend demand that the MQTT client ID match the Thing name, as per [best practice](https://docs.aws.amazon.com/wellarchitected/latest/iot-lens/identity-and-access-management.html). This guards against mismatch between things as job targets and MQTT client names.
 7. Likewise demand that each device has just one device certificate attached to it (in the AWS IoT Core registry) and for that certificate be [associated exclusively](https://docs.aws.amazon.com/iot/latest/developerguide/exclusive-thing.html) such that each device has a unique device certificate.
 8. Maintain strict chain of custody, ensuring that certificate create and commit requests originate from a Thing that is part of an in-progress rotation job. This guards against new certificates being issued to bad actors.
 9. Be resilient to unexpected loss of connection or loss of messages at inconvenient times.
@@ -162,7 +164,7 @@ This component requires **python3**, **python3-venv** and **pip3** to be install
 
 ### Hardware Security Module
 
-If the Greengrass core device uses a Hardware Security Module (HSM), it must support the following PKCS#11 API operations in addition to [the PKCS#11 API operation required by Greengrass](https://docs.aws.amazon.com/greengrass/v2/developerguide/pkcs11-provider-component.html#pkcs11-provider-component-requirements):
+If the Greengrass core device uses a Hardware Security Module (HSM), it must support the following PKCS#11 API operations in addition to [the PKCS#11 API operations required by Greengrass](https://docs.aws.amazon.com/greengrass/v2/developerguide/pkcs11-provider-component.html#pkcs11-provider-component-requirements):
 
 * `C_CopyObject`
 * `C_DestroyObject`
@@ -170,9 +172,9 @@ If the Greengrass core device uses a Hardware Security Module (HSM), it must sup
 
 ### Edge Runtime
 
-The [Greengrass edge runtime needs to be installed](https://docs.aws.amazon.com/greengrass/v2/developerguide/getting-started.html) to a suitable machine, virtual machine or EC2 instance. **It must be installed as a system service**.
+The [Greengrass nucleus edge runtime needs to be installed](https://docs.aws.amazon.com/greengrass/v2/developerguide/getting-started.html) to a suitable machine, virtual machine or EC2 instance. **It must be installed as a system service**. The nucleus lite edge runtime is not yet supported.
 
-Interpolation of component recipe variables must be enabled using [the **interpolateComponentConfiguration** setting](https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-component.html#greengrass-nucleus-component-configuration-interpolate-component-configuration). This requires Nucleus 2.6.0 or later. This setting should be applied before deploying the **aws.greengrass.labs.CertificateRotator** component. 
+Interpolation of component recipe variables must be enabled using [the **interpolateComponentConfiguration** setting](https://docs.aws.amazon.com/greengrass/v2/developerguide/greengrass-nucleus-component.html#greengrass-nucleus-component-configuration-interpolate-component-configuration). This setting should be applied before deploying the **aws.greengrass.labs.CertificateRotator** component. 
 
 If you use AWS Private CA to issue certificates, [the **greengrassDataPlaneEndpoint** setting should be set to **iotdata**](https://docs.aws.amazon.com/greengrass/v2/developerguide/configure-greengrass-core-v2.html#configure-nucleus-private-ca).
 
@@ -213,7 +215,7 @@ Each of your Greengrass core devices should have just one certificate attached t
 
 ### AWS CLI
 
-It may be necessary to [upgrade your AWS CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-cli.html) if you wish to use any **greengrassv2** commands, as these are relatively recent additions to the CLI.
+[Install the AWS CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-cli.html).
 
 ### AWS CDK
 
@@ -349,6 +351,14 @@ If an HSM is used, the component can only use **the subset of algorithms support
 ## Cloud Backend Configuration
 
 For details on configuring the cloud backend, please refer to the [cloud backend README](backend/README.md).
+
+# Costs
+
+If you use this component to rotate your device certificates, you will incur costs across all the services that comprise this solution. However, the "remote actions" cost associated with AWS IoT Jobs is the bulk of the cost, and this equates to a fraction of a cent per device. Please consult [AWS IoT Device Management pricing](https://aws.amazon.com/iot-device-management/pricing/) for details.
+
+# Limits
+
+The solution design minimizes the AWS IoT API calls in the backend Lambda functions to minimize the risk of throttling. The **AWSLabsCertificateRotator** job template includes a rollout configuration that should ensure that this solution is not throttled when rotating certificates at scale for a large fleet. This rollout configuration equates to 100 device rotations per minute.
 
 # Troubleshooting
 
