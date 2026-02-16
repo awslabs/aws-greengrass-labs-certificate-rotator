@@ -19,7 +19,7 @@ stages:
 pylint:
   stage: Static Analysis
   script:
-  - artifacts backend/lambda libs tests/artifacts tests/backend tests/libs robot/libs *.py
+  - pylint artifacts backend/lambda libs tests/artifacts tests/backend tests/libs robot/libs *.py
 
 pytest:
   stage: Unit Tests
