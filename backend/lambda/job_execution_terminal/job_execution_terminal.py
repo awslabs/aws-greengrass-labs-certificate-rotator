@@ -113,8 +113,7 @@ def valid_job(event):
 
 def valid_shadow(shadow):
     """Validates that the shadow has the expected fields"""
-    return shadow is not None and\
-            'newCertificateId' in shadow and\
+    return 'newCertificateId' in shadow and\
             'oldCertificateId' in shadow and\
             'progress' in shadow and\
             (shadow['progress'] == 'created' or shadow['progress'] == 'committed')
@@ -145,7 +144,7 @@ def handler(event, context):
     if not valid_job(event):
         send_notification(f'{msg_prefix}: INVALID job. Certificates were not cleaned up.')
     else:
-        rotation_progress = shadow['progress'] if valid_shadow(shadow) else None
+        rotation_progress = shadow['progress'] if (shadow is not None and valid_shadow(shadow)) else None
 
         if event['status'] == 'SUCCEEDED':
             # Is the success after the commit (as it should be)?

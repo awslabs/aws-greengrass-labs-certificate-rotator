@@ -1,6 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+# pylint: disable=R0903,R0801  # Single-method test classes and duplicate code acceptable in tests
+
 """
 Unit tests for backend.lambda.commit_certificate.py
 """

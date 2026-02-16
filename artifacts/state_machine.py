@@ -47,7 +47,7 @@ class StateMachine():
     @property
     def job_id(self) -> str:
         """ Getter for the job ID """
-        return self._job_id
+        return typing.cast(str, self._job_id)
 
     @job_id.setter
     def job_id(self, value: str):
@@ -121,12 +121,12 @@ class StateMachine():
 
     def on_rx_message(self, topic: str, message: str) -> None:
         """ Handles a message received on our subscribed topics """
-        if self._running:
+        if self._running and self._state is not None:
             self._state.on_rx_message(topic, message)
 
     def on_timeout(self) -> None:
         """ Handles a state timeout """
-        if self._running:
+        if self._running and self._state is not None:
             self._state.on_timeout()
 
     def fail_the_job(self, reason: str = 'Unknown error') -> None:
@@ -144,7 +144,7 @@ class StateMachine():
         self.publish(topic, json.dumps(request))
         self.change_state_idle()
 
-    def _create_ipc_client(self) -> typing.Union[GreengrassCoreIPCClientV2, None]:
+    def _create_ipc_client(self) -> GreengrassCoreIPCClientV2:
         """ Instantiates the IPC client """
         ipc_client = None
 

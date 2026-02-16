@@ -14,7 +14,7 @@ def fixture_state(mocker, state_machine):
     """ Instantiation of a single state """
     mocker.patch.multiple(State, __abstractmethods__=set())
     # pylint: disable-msg=abstract-class-instantiated
-    return State(state_machine)
+    return State(state_machine)  # type: ignore[abstract]
 
 def test_on_rx_message(state):
     """ Test that we get an exception """

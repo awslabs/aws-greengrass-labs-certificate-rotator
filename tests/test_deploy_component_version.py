@@ -66,8 +66,8 @@ def confirm_exit():
     sys.argv[1:] = [COMPONENT_VERSION, THING_GROUP_NAME]
     with pytest.raises(SystemExit) as system_exit:
         runpy.run_module('deploy_component_version')
-        assert system_exit.type == SystemExit
-        assert system_exit.code == 1
+    assert system_exit.type == SystemExit
+    assert system_exit.value.code == 1
 
 def confirm_success(boto3_client):
     """ Confirm program exit with no error """

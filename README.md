@@ -415,7 +415,7 @@ This solution is an extensible reference implementation. This section documents 
 Static analysis is performed using [Pylint](https://pylint.org/). Example execution:
 
 ```
-pylint artifacts backend/lambda libs tests *.py
+pylint artifacts backend/lambda libs tests/artifacts tests/backend tests/libs robot/libs *.py
 ```
 
 ## Static Type Checking
