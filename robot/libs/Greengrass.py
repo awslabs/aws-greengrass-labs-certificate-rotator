@@ -1,6 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+# pylint: disable=R0902  # Allow more instance attributes
+
 """
 Greengrass operations
 """
@@ -111,6 +113,7 @@ class Greengrass():
     def wait_for_job_to_finish(self, job_id):
         """ Waits for the job to complete """
         done = False
+        job_process_details = None
 
         while not done:
             job_process_details = self._iot_client.describe_job(jobId=job_id)['job']['jobProcessDetails']
@@ -262,7 +265,8 @@ class Greengrass():
             valid = ca_is_aws_iot == issuer_is_aws_iot and\
                     certificate.signature_algorithm_oid == SIGNATURE_ALGORITHMS[signature_algorithm] and\
                     isinstance(public_key, KEY_ALGORITHMS[key_algorithm]['type']) and\
-                    public_key.key_size == KEY_ALGORITHMS[key_algorithm]['size']
+                    (isinstance(public_key, (rsa.RSAPublicKey, ec.EllipticCurvePublicKey)) and\
+                     public_key.key_size == KEY_ALGORITHMS[key_algorithm]['size'])
 
         return valid
 

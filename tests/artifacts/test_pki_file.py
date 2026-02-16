@@ -68,7 +68,9 @@ def test_create_csr_rsa(mocker, pkifile, config, csr_builder):
 
     assert pkifile.create_csr() == CSR_PEM
 
-    gen_priv_key.assert_called_once_with(public_exponent=65537, key_size=KEY_ALGORITHMS[config.key_algorithm]['size'])
+    algo = KEY_ALGORITHMS[config.key_algorithm]
+    assert 'size' in algo
+    gen_priv_key.assert_called_once_with(public_exponent=65537, key_size=algo['size'])
     private_key.private_bytes.assert_called_once_with(encoding=serialization.Encoding.PEM,
                                                       format=serialization.PrivateFormat.TraditionalOpenSSL,
                                                       encryption_algorithm=ANY)
@@ -88,7 +90,9 @@ def test_create_csr_ec(mocker, pkifile, config, csr_builder):
 
     assert pkifile.create_csr() == CSR_PEM
 
-    gen_priv_key.assert_called_once_with(KEY_ALGORITHMS[config.key_algorithm]['curve'])
+    algo = KEY_ALGORITHMS[config.key_algorithm]
+    assert 'curve' in algo
+    gen_priv_key.assert_called_once_with(algo['curve'])
     private_key.private_bytes.assert_called_once_with(encoding=serialization.Encoding.PEM,
                                                       format=serialization.PrivateFormat.PKCS8,
                                                       encryption_algorithm=ANY)

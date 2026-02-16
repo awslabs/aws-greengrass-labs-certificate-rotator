@@ -26,7 +26,7 @@ phases:
   build:
     commands:
       # Perform static analysis on our Python source before we use it for anything else
-      - pylint artifacts libs tests *.py
+      - pylint artifacts backend/lambda libs tests/artifacts tests/backend tests/libs robot/libs *.py
 
       # Run static type checking on the component artifacts
       - mypy --ignore-missing-imports artifacts

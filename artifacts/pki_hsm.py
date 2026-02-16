@@ -13,11 +13,20 @@ from cryptography.hazmat.primitives import hashes
 from pki import PKI
 from awsiot.greengrasscoreipc.clientv2 import GreengrassCoreIPCClientV2
 
+if typing.TYPE_CHECKING:
+    import pkcs11
+    from pkcs11 import Attribute, ObjectClass, Mechanism, KeyType, MechanismFlag, MGF
+    from pkcs11.util.x509 import decode_x509_certificate
+    from pkcs11.util.rsa import encode_rsa_public_key
+    from pkcs11.util.ec import encode_ecdsa_signature, encode_named_curve_parameters
+    from asn1crypto import pem, x509, csr, keys, core, algos
+
 # Greengrass HSM/PKCS is only supported on Linux. And the python-pkcs11
 # module requires Python 3.9 or above. So we don't import these
 # packages unless we are in a system that can actually use them.
 # Pylint complains about this conditional section.
 # pylint: disable=possibly-used-before-assignment
+# pylint: disable=ungrouped-imports
 if platform.system() == 'Linux' and (sys.version_info.major > 3 or\
     (sys.version_info.major == 3 and sys.version_info.minor >= 9)):
     import pkcs11
@@ -359,14 +368,15 @@ class PKIHSM(PKI):
         pending_id = self._get_temp_id(priv_key.id, PKIHSM.SUFFIX_PENDING)
 
         # Generate a pending new key pair, retaining the ID of the old key.
-        if KEY_ALGORITHMS[self._config.key_algorithm]['type'] == KeyType.RSA:
+        algo = KEY_ALGORITHMS[self._config.key_algorithm]
+        if algo['type'] == KeyType.RSA:
             print('Creating RSA key pair')
-            size = KEY_ALGORITHMS[self._config.key_algorithm]['size']
+            size = typing.cast(RsaKeyAlgorithm, algo)['size']
             public, private = session.generate_keypair(key_type=KeyType.RSA, key_length=size,
                                                         id=pending_id, label=self._label_pending, store=True)
         else:
             print('Creating EC key pair')
-            curve = KEY_ALGORITHMS[self._config.key_algorithm]['curve']
+            curve = typing.cast(EcKeyAlgorithm, algo)['curve']
             parameters = session.create_domain_parameters(KeyType.EC, {
                 Attribute.EC_PARAMS: encode_named_curve_parameters(curve),
             }, local=True)

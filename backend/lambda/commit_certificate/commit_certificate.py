@@ -47,8 +47,7 @@ def valid_job_execution(event):
 
 def valid_shadow(shadow):
     """ Validates that the shadow has the expected fields """
-    return shadow is not None and\
-            'newCertificateId' in shadow and\
+    return 'newCertificateId' in shadow and\
             'oldCertificateId' in shadow and\
             'progress' in shadow and\
             shadow['progress'] == 'created'
@@ -97,6 +96,7 @@ def handler(event, context):
 
     # If all the pre-conditions are met, we can proceed
     if valid_job_execution(event) and\
+        shadow is not None and\
         valid_shadow(shadow) and\
         valid_thing_principals(thing_principal_objects) and\
         valid_client(event, thing_principal_objects, shadow['newCertificateId']):

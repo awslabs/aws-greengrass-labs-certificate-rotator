@@ -9,6 +9,7 @@ from a device, and publishes it back to the device.
 
 import json
 import os
+import typing
 import boto3
 
 # Global clients initialized lazily to avoid breaking unit tests
@@ -96,9 +97,9 @@ def create_pca_certificate(csr, ca_arn):
     try:
         response = pca.issue_certificate(CertificateAuthorityArn=ca_arn,
                                             Csr=csr.encode('utf-8'),
-                                            SigningAlgorithm=signing_algorithm,
+                                            SigningAlgorithm=typing.cast(str, signing_algorithm),
                                             Validity={
-                                                'Value': int(validity_in_days),
+                                                'Value': int(typing.cast(str, validity_in_days)),
                                                 'Type': 'DAYS'
                                             })
         print(response)

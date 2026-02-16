@@ -15,7 +15,7 @@ def fixture_config(mocker):
     mocker.patch('pki.Config.__init__', return_value=None)
     mocker.patch('pki.EffectiveConfig.__init__', return_value=None)
     # pylint: disable-msg=abstract-class-instantiated
-    return PKI(None, None, None)
+    return PKI(None, None, None)  # type: ignore[abstract,arg-type]
 
 def test_create_csr(pki):
     """ Test that we get an exception """

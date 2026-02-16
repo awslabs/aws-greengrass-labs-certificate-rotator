@@ -1,0 +1,16 @@
+{
+  "executionEnvironments": [
+    {
+      "root": "tests",
+      "extraPaths": [
+        "artifacts",
+        "libs",
+        "backend/lambda/create_certificate",
+        "backend/lambda/commit_certificate",
+        "backend/lambda/job_execution_terminal"
+      ]
+    }
+  ],
+  "reportOptionalSubscript": false,
+  "reportOptionalMemberAccess": false
+}

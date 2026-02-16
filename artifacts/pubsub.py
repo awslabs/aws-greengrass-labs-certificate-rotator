@@ -54,8 +54,8 @@ class PubSub():
     def on_stream_event(self, event: IoTCoreMessage) -> None:
         """ Handles an incoming message from subscriptions """
         try:
-            message = str(event.message.payload, 'utf-8')
-            topic = event.message.topic_name
+            message = str(typing.cast(bytes, event.message.payload), 'utf-8')
+            topic = typing.cast(str, event.message.topic_name)
             print(f'Received new message on topic {topic}: {message}')
             self._subscription_callback(topic, json.loads(message))
         except Exception:

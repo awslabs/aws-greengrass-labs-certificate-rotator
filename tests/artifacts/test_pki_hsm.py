@@ -1,6 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+# pylint: disable=R0914,R0801  # Too many locals and duplicate code acceptable in tests
+
 """
 Unit tests for artifacts.pki_hsm.py
 """
@@ -121,8 +123,10 @@ def test_create_csr_rsa(mocker, pkihsm, pkcs11_session, config, csr_request_info
 
     assert pkihsm.create_csr() == CSR_PEM
 
+    algo = KEY_ALGORITHMS[config.key_algorithm]
+    assert 'size' in algo
     pkcs11_session.generate_keypair.assert_called_once_with(key_type=KeyType.RSA,
-                                                            key_length=KEY_ALGORITHMS[config.key_algorithm]['size'],
+                                                            key_length=algo['size'],
                                                             id=ID_PENDING, label=LABEL_PENDING, store=True)
     encode_rsa_public_key.assert_called_once_with(pending_pub_key_object)
     pending_pub_key_object.destroy.assert_called_once()
@@ -168,7 +172,9 @@ def test_create_csr_ec(mocker, pkihsm, pkcs11_session, config, csr_request_info)
 
     assert pkihsm.create_csr() == CSR_PEM
 
-    encode_named_curve_parameters.assert_called_once_with(KEY_ALGORITHMS[config.key_algorithm]['curve'])
+    algo = KEY_ALGORITHMS[config.key_algorithm]
+    assert 'curve' in algo
+    encode_named_curve_parameters.assert_called_once_with(algo['curve'])
     pkcs11_session.create_domain_parameters.assert_called_once()
     parameters.generate_keypair.assert_called_once_with(id=ID_PENDING, label=LABEL_PENDING, store=True,
                                             capabilities=MechanismFlag.SIGN|MechanismFlag.DECRYPT|MechanismFlag.UNWRAP)

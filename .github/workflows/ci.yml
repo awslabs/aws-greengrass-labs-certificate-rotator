@@ -26,7 +26,7 @@ jobs:
         bandit --version
     - name: Static Analysis
       run: |
-        pylint artifacts backend/lambda libs tests *.py
+        pylint artifacts backend/lambda libs tests/artifacts tests/backend tests/libs robot/libs *.py
     - name: Unit Tests
       run: |
         pytest --junit-xml=junit.xml --cov=. --cov-branch
