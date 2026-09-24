@@ -20,11 +20,16 @@
     "inlineSources": true,
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
-    "isolatedModules": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
     "typeRoots": [
       "./node_modules/@types"
+    ],
+    "noEmit": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "types": [
+      "jest",
+      "node"
     ]
   },
   "exclude": [

@@ -6,7 +6,7 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { CertificateRotatorStack } from '../lib/certificate-rotator-stack';
 import { AwsSolutionsChecks } from 'cdk-nag'
-import { Aspects } from 'aws-cdk-lib';
+import { Aspects } from 'aws-cdk-lib/core';
 
 const app = new cdk.App();
 
