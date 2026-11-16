@@ -206,21 +206,27 @@ export class CertificateRotatorStack extends cdk.Stack {
   private createCertificateLambdaPolicy(): iam.Policy {
     const policy = new iam.Policy(this, `${this.stackName}CreateLambdaPolicy`, {
       statements: [
-        // Wildcard resource is required for these actions
+        // Wildcard resource is required for these actions because they do not support resource-level permissions
         // https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsiot.html
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
             'iot:DescribeEndpoint', 'iot:CreateCertificateFromCsr',
-            'iot:RegisterCertificateWithoutCA', 'iot:ListPrincipalPolicies',
-            'iot:ListThingPrincipalsV2', 'iot:AttachThingPrincipal'
+            'iot:RegisterCertificateWithoutCA', 'iot:ListPrincipalPolicies'
           ],
           resources: ['*']
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
-            'iot:AttachPolicy'
+            'iot:ListThingPrincipalsV2'
+          ],
+          resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'iot:AttachPolicy', 'iot:AttachThingPrincipal'
           ],
           resources: [`arn:aws:iot:${this.region}:${this.account}:cert/*`]
         }),
@@ -262,14 +268,21 @@ export class CertificateRotatorStack extends cdk.Stack {
   private commitCertificateLambdaPolicy(): iam.Policy {
     const policy = new iam.Policy(this, `${this.stackName}CommitLambdaPolicy`, {
       statements: [
-        // Wildcard resource is required for these actions
+        // Wildcard resource is required for this action because it does not support resource-level permissions
         // https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsiot.html
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
-            'iot:DescribeEndpoint', 'iot:ListThingPrincipalsV2'
+            'iot:DescribeEndpoint'
           ],
           resources: ['*']
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'iot:ListThingPrincipalsV2'
+          ],
+          resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
@@ -302,21 +315,28 @@ export class CertificateRotatorStack extends cdk.Stack {
   private jobExecutionTerminalLambdaPolicy(topic: sns.Topic): iam.Policy {
     const policy = new iam.Policy(this, `${this.stackName}JobTerminalLambdaPolicy`, {
       statements: [
-        // Wildcard resource is required for these actions
+        // Wildcard resource is required for these actions because they do not support resource-level permissions
         // https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsiot.html
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
-            'iot:DescribeEndpoint', 'iot:ListPrincipalPolicies',
-            'iot:ListThingPrincipalsV2', 'iot:DetachThingPrincipal'
+            'iot:DescribeEndpoint', 'iot:ListPrincipalPolicies'
           ],
           resources: ['*']
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
+            'iot:ListThingPrincipalsV2'
+          ],
+          resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
             'iot:DescribeCertificate', 'iot:DeleteCertificate',
-            'iot:DetachPolicy', 'iot:UpdateCertificate'
+            'iot:DetachPolicy', 'iot:UpdateCertificate',
+            'iot:DetachThingPrincipal'
           ],
           resources: [`arn:aws:iot:${this.region}:${this.account}:cert/*`]
         }),
@@ -389,6 +409,8 @@ export class CertificateRotatorStack extends cdk.Stack {
     const lambdaFunctionName = `${this.stackName}CustomResourceJobExecutionEvents`
 
     const basicRole = this.createLambdaBasicRole(lambdaFunctionName)
+    // Wildcard resource is required for this action because it does not support resource-level permissions
+    // https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsiot.html
     basicRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
