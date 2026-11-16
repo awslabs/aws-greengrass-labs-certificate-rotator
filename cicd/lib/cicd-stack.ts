@@ -78,11 +78,27 @@ export class CicdStack extends cdk.Stack {
   }
 
   private createBucket(): s3.Bucket {
+    // Dedicated bucket for server access logs. A bucket should not log to itself.
+    const accessLogsBucket = new s3.Bucket(this, `${this.stackName}AccessLogsBucket`, {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      versioned: false,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true
+    });
+
+    NagSuppressions.addResourceSuppressions(accessLogsBucket, [
+      {
+        id: 'AwsSolutions-S1',
+        reason: 'This is the server access logs destination bucket. Logging it would be recursive.'
+      }
+    ])
+
     return new s3.Bucket(this, `${this.stackName}Bucket`, {
       bucketName: `${this.stackName.toLowerCase()}-${this.account}-${this.region}`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       versioned: false,
-      serverAccessLogsPrefix: 'access-logs',
+      serverAccessLogsBucket: accessLogsBucket,
+      serverAccessLogsPrefix: 'access-logs/',
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true
     });
@@ -254,6 +270,8 @@ export class CicdStack extends cdk.Stack {
                                             bucketName: string): iam.Policy {
     const policy = new iam.Policy(this, `${this.stackName}ComponentBuildProjectPolicy`, {
       statements: [
+        // Wildcard resource is required for this action because it does not support resource-level permissions
+        // https://docs.aws.amazon.com/service-authorization/latest/reference/list_greengrassv2.html
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: ['greengrass:CreateDeployment'],
@@ -315,6 +333,8 @@ export class CicdStack extends cdk.Stack {
   private createTestProjectPolicy(thingGroupName: string, pcaCaId: string): iam.Policy {
     const policy = new iam.Policy(this, `${this.stackName}TestProjectPolicy`, {
       statements: [
+        // Wildcard resource is required for this action because it does not support resource-level permissions
+        // https://docs.aws.amazon.com/service-authorization/latest/reference/list_greengrassv2.html
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: ['greengrass:CreateDeployment'],
@@ -340,6 +360,8 @@ export class CicdStack extends cdk.Stack {
           actions: ['iot:DescribeThingGroup'],
           resources: [`arn:aws:iot:${this.region}:${this.account}:thinggroup/${thingGroupName}`]
         }),
+        // Wildcard resource is required for this action because it does not support resource-level permissions
+        // https://docs.aws.amazon.com/service-authorization/latest/reference/list_greengrassv2.html
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: ['greengrass:ListCoreDevices'],
@@ -355,10 +377,17 @@ export class CicdStack extends cdk.Stack {
           actions: ['greengrass:GetCoreDevice', 'greengrass:ListInstalledComponents'],
           resources: [`arn:aws:greengrass:${this.region}:${this.account}:coreDevices:*`]
         }),
+        // Wildcard resource is required for this action because it does not support resource-level permissions
+        // https://docs.aws.amazon.com/service-authorization/latest/reference/list_awsiot.html
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: ['iot:DescribeEndpoint', 'iot:ListThingPrincipals'],
+          actions: ['iot:DescribeEndpoint'],
           resources: ['*']
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['iot:ListThingPrincipals'],
+          resources: [`arn:aws:iot:${this.region}:${this.account}:thing/*`]
         }),
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,

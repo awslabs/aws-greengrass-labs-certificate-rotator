@@ -13,7 +13,7 @@ function checkBasicResources(template: Template) {
   template.hasResourceProperties('AWS::CodeBuild::Project', { Name: `${STACK_NAME}BuildBackend` });
   template.hasResourceProperties('AWS::CodeBuild::Project', { Name: `${STACK_NAME}BuildComponent` });
   template.hasResourceProperties('AWS::CodeBuild::Project', { Name: `${STACK_NAME}Test` });
-  template.resourceCountIs('AWS::S3::Bucket', 1);
+  template.resourceCountIs('AWS::S3::Bucket', 2);
   template.resourceCountIs('AWS::CodeBuild::ReportGroup', 2);
   template.hasResourceProperties('AWS::SNS::Topic', { TopicName: `${STACK_NAME}Notification` });
 }
@@ -32,6 +32,7 @@ test('Good Stack', () => {
 
   const stack = new Cicd.CicdStack(app, STACK_NAME);
   const template = Template.fromStack(stack)
+  checkBasicResources(template);
   template.resourceCountIs('AWS::Events::Rule', 1);
 });
 
