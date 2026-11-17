@@ -1,6 +1,6 @@
 # Requirements for developer machine
 asn1crypto==1.5.1
-awsiotsdk==1.28.0
+awsiotsdk==1.31.0
 bandit==1.9.4
 boto3==1.42.31
 cryptography==50.0.0
