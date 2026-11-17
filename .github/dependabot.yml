@@ -1,0 +1,50 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
+
+version: 2
+updates:
+  # CDK applications. Groups are per directory, so each upgrade produces one
+  # PR for backend/ and one PR for cicd/.
+  - package-ecosystem: npm
+    directories:
+      - /backend
+      - /cicd
+    schedule:
+      interval: monthly
+    groups:
+      # Keep the CDK CLI and library in step so the CLI always supports the
+      # cloud assembly schema that aws-cdk-lib produces.
+      cdk:
+        patterns:
+          - aws-cdk
+          - aws-cdk-lib
+          - constructs
+          - cdk-nag
+      # Everything else (jest, swc, typescript, tsx, @types/*)
+      tooling:
+        patterns:
+          - "*"
+      # Combine security fixes for transitive dependencies into one PR
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  # Python requirements for the developer machine, the Greengrass component
+  # and the Robot Framework tests. Several packages are pinned in more than
+  # one of these files, so each dependency is updated in all of them at once.
+  #
+  # Before merging a cryptography update, check that the new version has
+  # pre-built wheels for the target devices (see artifacts/requirements.txt).
+  - package-ecosystem: pip
+    directories:
+      - /
+      - /artifacts
+      - /robot
+    schedule:
+      interval: monthly
+    groups:
+      python:
+        group-by: dependency-name
+        patterns:
+          - "*"
