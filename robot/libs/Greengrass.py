@@ -168,7 +168,8 @@ class Greengrass():
         while len(things) > 0:
             self._logger.info('Things still processing: %s', len(things))
 
-            for thing in things:
+            # Iterate over a copy because we remove things from the list
+            for thing in list(things):
                 try:
                     shadow_response = self._iot_data_client.get_thing_shadow(
                         thingName=thing,

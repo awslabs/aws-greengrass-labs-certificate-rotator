@@ -344,12 +344,11 @@ class PKIHSM(PKI):
         """ Gets the certificate from the configured PKCS slot and token """
         # There should only ever be at most one certificate object in the token
         # that matches the given label.
-        cert_object = None
-        for cert_object in session.get_objects({Attribute.CLASS: ObjectClass.CERTIFICATE,
-                                                Attribute.LABEL: label}):
-            pass
+        # Exhaust the search so that python-pkcs11 finalizes the find operation.
+        cert_objects = list(session.get_objects({Attribute.CLASS: ObjectClass.CERTIFICATE,
+                                                 Attribute.LABEL: label}))
 
-        return cert_object
+        return cert_objects[-1] if cert_objects else None
 
     def _get_key(self, session, object_class, label):
         try:
