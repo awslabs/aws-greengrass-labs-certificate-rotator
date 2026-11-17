@@ -7,7 +7,7 @@ phases:
   install:
     runtime-versions:
       python: 3.13
-      nodejs: 22
+      nodejs: 24
 
   pre_build:
     commands:
