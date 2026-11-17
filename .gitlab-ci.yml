@@ -1,27 +1,42 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-image: python:3.13
-
-before_script:
-  - python --version
-  - pip install -r requirements.txt
-  - pylint --version
-  - pytest --version
-  - bandit --version
+# Run pipelines for merge requests and the default branch only
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 stages:
   - Static Analysis
   - Unit Tests
   - Security Scan
+  - CDK
 
+.python:
+  image: python:3.13
+  before_script:
+    - python --version
+    - pip install -r requirements.txt
+    - pylint --version
+    - mypy --version
+    - pytest --version
+    - bandit --version
 
 pylint:
+  extends: .python
   stage: Static Analysis
   script:
   - pylint artifacts backend/lambda libs tests/artifacts tests/backend tests/libs robot/libs *.py
 
+mypy:
+  extends: .python
+  stage: Static Analysis
+  script:
+  - mypy --ignore-missing-imports artifacts
+
 pytest:
+  extends: .python
   stage: Unit Tests
   script:
   - pytest --junit-xml=junit.xml --cov=. --cov-branch
@@ -31,6 +46,36 @@ pytest:
       junit: junit.xml
 
 bandit:
+  extends: .python
   stage: Security Scan
   script:
   - bandit -r -v artifacts backend/lambda libs *.py
+
+# Type check, unit test and synthesize (includes cdk-nag) each CDK app.
+# Placeholder context values are used. Synth needs no AWS credentials.
+cdk:
+  image: node:24
+  stage: CDK
+  needs: []
+  parallel:
+    matrix:
+      - APP: backend
+      - APP: cicd
+        CDK_CONTEXT: >-
+          -c ConnectionId=00000000-0000-0000-0000-000000000000
+          -c OwnerName=placeholder
+          -c ThingGroupName=placeholder
+          -c PcaCaId=00000000-0000-0000-0000-000000000000
+  cache:
+    key: npm-$APP
+    paths:
+      - .npm/
+  before_script:
+    - cd $APP
+    - npm ci --cache ../.npm --prefer-offline
+    - node --version
+    - npx cdk --version
+  script:
+    - npm run build
+    - npm test
+    - npx cdk synth --quiet --no-notices $CDK_CONTEXT

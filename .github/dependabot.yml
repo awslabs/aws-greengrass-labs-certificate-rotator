@@ -3,8 +3,7 @@
 
 version: 2
 updates:
-  # CDK applications. Groups are per directory, so each upgrade produces one
-  # PR for backend/ and one PR for cicd/.
+  # CDK applications. Each group produces one PR covering backend/ and cicd/.
   - package-ecosystem: npm
     directories:
       - /backend
@@ -16,7 +15,8 @@ updates:
       # that needs code changes, so major upgrades are done by hand.
       - dependency-name: cdk-nag
         update-types: ["version-update:semver-major"]
-      # Node.js types must match the Node.js version in the CodeBuild buildspec.
+      # Node.js types must match the Node.js version used by CI and the
+      # CodeBuild buildspec.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
     groups:
@@ -54,5 +54,15 @@ updates:
     groups:
       python:
         group-by: dependency-name
+        patterns:
+          - "*"
+
+  # Actions used by the GitHub workflows (pinned by commit SHA)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
         patterns:
           - "*"
