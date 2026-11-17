@@ -119,6 +119,10 @@ def wait_for_deployment_to_finish(deploy_id):
             print(f'Failed to get deployment\nException: {e}')
             sys.exit(1)
 
+        # Pace the polling to stay well within the API rate limits
+        if not done:
+            time.sleep(1)
+
     if succeeded:
         print(f'Deployment completed successfully in {time.time() - snapshot:.1f} seconds')
     elif not done:
