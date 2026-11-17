@@ -11,6 +11,14 @@ updates:
       - /cicd
     schedule:
       interval: monthly
+    ignore:
+      # cdk-nag 3.x is a breaking rewrite (Aspect -> policy validation plugin)
+      # that needs code changes, so major upgrades are done by hand.
+      - dependency-name: cdk-nag
+        update-types: ["version-update:semver-major"]
+      # Node.js types must match the Node.js version in the CodeBuild buildspec.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       # Keep the CDK CLI and library in step so the CLI always supports the
       # cloud assembly schema that aws-cdk-lib produces.
